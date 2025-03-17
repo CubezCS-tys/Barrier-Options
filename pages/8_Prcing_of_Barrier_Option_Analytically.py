@@ -415,6 +415,7 @@ def barrier_option_price(S0, K, T, r, q, sigma, H, option_type):
             cdi   = c - cdo
             return cdi
         else:
+            cdi = c - cdo
             return cdi
 
     # --------------------------------
@@ -468,7 +469,7 @@ def barrier_option_price(S0, K, T, r, q, sigma, H, option_type):
     # Up-and-out Call
     # --------------------------------
     elif option_type == 'up-and-out call' and H <= K:
-        # If the barrier H <= K is below the current spot,
+        # If the barrier barrier <= K is below the current spot,
         # often up-and-out call is worthless if it is truly "up" barrier?
         return 0.0
 
@@ -480,7 +481,10 @@ def barrier_option_price(S0, K, T, r, q, sigma, H, option_type):
                  * (norm.cdf(-y + sigma*np.sqrt(T))
                     - norm.cdf(-y1 + sigma*np.sqrt(T))))
         cuo = c - cui
-        return cuo
+        if cuo > 0:
+            return cuo
+        else:
+            return 0
 
     # --------------------------------
     # Up-and-in Put
@@ -511,7 +515,7 @@ def barrier_option_price(S0, K, T, r, q, sigma, H, option_type):
     elif option_type == 'up-and-in put' and H <= K:
         # up-and-in put is the difference p - up-and-out put
         # but for the simplified logic, we can just return p if the barrier is < K
-        return p
+        return black_scholes(S0,K,T,r,sigma,"Put")
 
     # --------------------------------
     # Up-and-out Put
@@ -521,11 +525,16 @@ def barrier_option_price(S0, K, T, r, q, sigma, H, option_type):
         pui = (-S0*np.exp(-q*T)*(H/S0)**(2*lam)*norm.cdf(-y)
                + K*np.exp(-r*T)*(H/S0)**(2*lam - 2)
                  * norm.cdf(-y + sigma*np.sqrt(T)))
-        puo = p - pui
-        return puo
+        if pui > 0:
+            puo = black_scholes(S0,K,T,r,sigma,"Put") - pui
+            return puo
+        else:
+            pui = 0
+            puo = black_scholes(S0,K,T,r,sigma,"Put") - pui
+            return puo
 
     elif option_type == 'up-and-out put' and H <= K:
-        # Standard formula for H <= K
+        # Standard formula for barrier <= K
         puo = (
             -S0*np.exp(-q*T)*norm.cdf(-x1)
             + K*np.exp(-r*T)*norm.cdf(-x1 + sigma*np.sqrt(T))
@@ -533,7 +542,8 @@ def barrier_option_price(S0, K, T, r, q, sigma, H, option_type):
             - K*np.exp(-r*T)*(H/S0)**(2*lam - 2)*norm.cdf(-y1 + sigma*np.sqrt(T))
         )
         if puo < 0:
-            return 0
+            puo = 0
+            return puo
         else:
             return puo
 
