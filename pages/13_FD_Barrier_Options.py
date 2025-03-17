@@ -1406,7 +1406,8 @@
 #         legend_title="Method"
 #     )
 #     st.plotly_chart(fig)
-
+####################################################################################################################################################################
+#MAIN
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
@@ -1760,7 +1761,7 @@ def forward_euler_vanilla_put(S0, K, T, r, sigma, dS, dt):
     t_arr = np.linspace(0, T, N+1)
     for i in range(N+1):
         tau = T - t_arr[i]
-        V[i, 0] = 0
+        V[i, 0] = 100
         V[i, -1] = K*np.exp(-r*tau)
 
     # PDE Coeffs
@@ -2020,12 +2021,12 @@ def forward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type):
             # zero out for S <= barrier
             for j in range(M+1):
                 if S_grid[j] <= barrier:
-                    V[n-1, j] = 0.0
+                    V[n-1, j] = 0
 
         # Interpolate to get price at S0
         interp_fn = interp1d(S_grid, V[0,:], kind='linear', fill_value='extrapolate')
         priceDop = float(interp_fn(S0))
-        
+            
         priceVan, S_gridV, PDE_van = forward_euler_vanilla_put(S0, K, T, r, sigma, dS, dt)
         
         PDE_dinp = PDE_van - V[0,:]
@@ -2230,7 +2231,7 @@ def app():
     # Sidebar inputs
     S0 = st.sidebar.number_input("Spot Price (S0)", value=100.0, step=1.0)
     K  = st.sidebar.number_input("Strike Price (K)", value=100.0, step=1.0)
-    T  = st.sidebar.number_input("Time to Maturity (T)", value=1.0, step=0.1)
+    T  = st.sidebar.number_input("Time to Maturity (T)", value=1.0, step=0.00001)
     r  = st.sidebar.number_input("Risk-Free Rate (r)", value=0.05, step=0.01)
     q  = st.sidebar.number_input("Dividend Yield (q)", value=0.00, step=0.01)
     sigma = st.sidebar.number_input("Volatility (sigma)", value=0.2, step=0.01)
