@@ -1,316 +1,614 @@
 import streamlit as st
 import numpy as np
-import matplotlib.pyplot as plt
+import pandas as pd
+from scipy.stats import norm
+import plotly.graph_objects as go
+from scipy.linalg import lu_factor, lu_solve
+from scipy.interpolate import interp1d
 
 ###############################################################################
-# Utility functions
+# Analytical Black-Scholes formula (vanilla only)
 ###############################################################################
+def black_scholes(S, K, T, r, sigma, option_type):
+    """Vanilla Black-Scholes formula for reference (call or put)."""
+    # Avoid division by zero if T=0
+    if T <= 1e-12:
+        payoff = max(S - K, 0) if option_type == "Call" else max(K - S, 0)
+        return payoff
 
-def vanilla_payoff(S, K, option_type="call"):
-    """
-    Computes the payoff of a European call/put at maturity.
-    :param S: Spot array (or scalar).
-    :param K: Strike price.
-    :param option_type: "call" or "put"
-    :return: Payoff array (or scalar).
-    """
-    if option_type == "call":
-        return np.maximum(S - K, 0.0)
+    d1 = (np.log(S / K + 1e-99) + (r + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T) + 1e-12)
+    d2 = d1 - sigma * np.sqrt(T)
+    if option_type == "Call":
+        price = S * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
     else:
-        return np.maximum(K - S, 0.0)
+        price = K * np.exp(-r * T) * norm.cdf(-d2) - S * norm.cdf(-d1)
+    return price
 
-def apply_knock_out_condition(U, S_grid, barrier, barrier_type):
+###############################################################################
+# PDE Solvers for Vanilla (No Barrier)
+###############################################################################
+def forward_euler_vanilla(S0, K, T, r, sigma, dS, dt, option_type):
     """
-    Zeroes out values in U that have 'knocked out'.
-    :param U: The option value array, shape = (Nspace,).
-    :param S_grid: The array of underlying prices corresponding to U.
-    :param barrier: The barrier level.
-    :param barrier_type: "up" or "down".
-    :return: modified U (in-place).
+    Forward Euler PDE for a *vanilla* (no barrier) European call/put.
+    Returns: (price_at_S0, S_grid, option_values_at_t0).
     """
-    if barrier_type == "up":
-        # If S >= barrier, the option knocks out
-        U[S_grid >= barrier] = 0.0
-    else: # "down"
-        # If S <= barrier, the option knocks out
-        U[S_grid <= barrier] = 0.0
-
-def price_knock_out_vanilla(method, S_grid, r, sigma, K, T, M, N,
-                            barrier, barrier_type, option_type):
-    """
-    Price a knock-out (up-and-out or down-and-out) barrier option
-    by directly applying zero boundary at knocked-out region
-    in a PDE solver. Simplistic approach: we re-zero after each time step.
-    """
-    # Grid spacing
-    ds = S_grid[1] - S_grid[0]
+    S_max = 2 * max(S0, K) * np.exp(r * T)
+    M = int(round(S_max / dS))
+    N = int(round(T / dt))
+    # Recompute exact dS, dt so the grid lines up
+    dS = S_max / M
     dt = T / N
-    # Coefficients for PDE
-    # in the PDE: dU/dt + r S dU/dS + 0.5 sigma^2 S^2 d2U/dS^2 - rU = 0
-    # We'll define a, b, c arrays for standard FD:
-    #   alpha_i = 0.5 * dt * (sigma^2 * i^2 - r * i)
-    #   beta_i  = 1 - dt * (sigma^2 * i^2 + r)
-    #   gamma_i = 0.5 * dt * (sigma^2 * i^2 + r * i)
-    
-    # For i in [1..M-1], where i indexes in space
-    # S_i = i * ds (assuming S_grid[0] = 0 if scaled that way, but we have a general grid)
-    
-    # We'll store the option values in U
-    U = vanilla_payoff(S_grid, K, option_type)
-    
-    # For convenience, define some arrays for the coefficients:
-    # But we must convert from S to "i" carefully. We'll do it in a loop.
 
-    # Prepare tri-diagonal coefficients for the implicit part (if used)
-    # We'll store them so that forward/backward/Crank can share them.
-    i_values = np.arange(len(S_grid))
-    # Because S_grid might not be i*ds exactly, we approximate i as S/ds for the formula
-    i_float = S_grid / ds
-    alpha = 0.5 * dt * (sigma**2 * i_float**2 - r * i_float)
-    beta  = 1.0 - dt * (sigma**2 * i_float**2 + r)
-    gamma = 0.5 * dt * (sigma**2 * i_float**2 + r * i_float)
+    matval = np.zeros((M + 1, N + 1))
+    vetS = np.linspace(0, S_max, M + 1)
 
-    def apply_boundary_conditions(U_t):
-        # At S=0 (left boundary), for calls payoff = 0, for puts payoff = K*e^{-r*(T-t)}
-        # We'll apply a "linear" boundary or Dirichlet depending on option type:
-        # This is simplistic: call(0) ~ 0, put(0) ~ K * e^{-r tau}, but we do a direct approach:
-        if option_type == "call":
-            U_t[0] = 0.0
-        else:  # put
-            U_t[0] = K * np.exp(-r*(0.0))  # might approximate as we move in time
-        # At S max, for calls: ~ S-K e^{-r*(T-t)}, for puts ~ 0
-        # We'll do a simplistic approach:
-        if option_type == "call":
-            U_t[-1] = S_grid[-1] - K * np.exp(-r*(0.0))
-            U_t[-1] = max(U_t[-1], 0.0)
-        else:
-            U_t[-1] = 0.0
+    # Final condition (at expiry)
+    if option_type == "Call":
+        matval[:, -1] = np.maximum(vetS - K, 0)
+    else:  # put
+        matval[:, -1] = np.maximum(K - vetS, 0)
 
-    # We define separate routines for forward, backward, and CN steps:
+    # Boundary conditions (for each time slice)
+    # left boundary (S=0)
+    if option_type == "Call":
+        matval[0, :] = 0.0
+    else:  # put
+        # put(0) ~ K*e^{-r*(T - t)}, we approximate with discrete steps
+        t_vec = np.linspace(0, T, N + 1)
+        matval[0, :] = K * np.exp(-r * (T - t_vec))
 
-    def forward_euler_step(U_t):
-        # U_{t+dt}(i) = U_t(i) + alpha_i * U_t(i-1) + beta_i * U_t(i) + gamma_i * U_t(i+1)
-        U_next = np.zeros_like(U_t)
-        for i in range(1, len(S_grid)-1):
-            U_next[i] = (U_t[i]
-                         + alpha[i] * U_t[i-1]
-                         + beta[i]  * U_t[i]
-                         + gamma[i] * U_t[i+1])
-        # boundary
-        apply_boundary_conditions(U_next)
-        # barrier knock-out
-        apply_knock_out_condition(U_next, S_grid, barrier, barrier_type)
-        return U_next
+    # right boundary (S = S_max)
+    if option_type == "Call":
+        t_vec = np.linspace(0, T, N + 1)
+        matval[-1, :] = (S_max - K * np.exp(-r * (T - t_vec)))
+    else:  # put
+        matval[-1, :] = 0.0
 
-    # For backward Euler and CN, we need to solve a linear system A * U_{t+1} = B * U_t
-    # backward Euler => A = I - M   and B = I
-    # M is the matrix with tri-diagonal from alpha, beta, gamma.
-    # We'll construct the matrix once.
+    # Coefficients for the PDE
+    # i-values in [0..M]
+    i_idx = np.arange(M + 1)
+    a = 0.5 * dt * (sigma**2 * i_idx**2 - r * i_idx)
+    b = 1 - dt * (sigma**2 * i_idx**2 + r)
+    c = 0.5 * dt * (sigma**2 * i_idx**2 + r * i_idx)
 
-    # For i from 1 to M-1:
-    #   -alpha_i * U(i-1) + (1 - beta_i) * U(i) - gamma_i * U(i+1) = U_t(i)
-    # But note sign differences; carefully define the tri-diagonal.
+    # Time stepping backward from j=N to j=0
+    for j in range(N, 0, -1):
+        for i in range(1, M):
+            matval[i, j - 1] = a[i] * matval[i - 1, j] \
+                               + b[i] * matval[i, j] \
+                               + c[i] * matval[i + 1, j]
 
-    # Build tri-diagonal for backward Euler and CN
-    # Let’s define them in a standard form:
-    #  diagL[i] = -alpha[i], diagM[i] = (1 - beta[i]), diagU[i] = -gamma[i]
-    # Then for CN we combine half step explicit + half step implicit
-    diagL = np.zeros(len(S_grid))
-    diagM = np.zeros(len(S_grid))
-    diagU = np.zeros(len(S_grid))
+    # Interpolate the t=0 slice to find the price at S0
+    price_interp = interp1d(vetS, matval[:, 0], kind='linear', fill_value="extrapolate")
+    price = price_interp(S0)
+    return price, vetS, matval[:, 0]
 
-    for i in range(1, len(S_grid)-1):
-        diagL[i] = -alpha[i]
-        diagM[i] = 1.0 + alpha[i] + gamma[i]
-        diagU[i] = -gamma[i]
 
-    def solve_tridiagonal(L, M, U_, rhs):
-        """
-        Solve a tri-diagonal system A x = rhs
-        where A has sub-diagonal L, diagonal M, super-diagonal U_.
-        Using simple Thomas algorithm.
-        """
-        n = len(rhs)
-        # Forward pass
-        for i in range(1,n):
-            w = L[i]/M[i-1]
-            M[i] = M[i] - w*U_[i-1]
-            rhs[i] = rhs[i] - w*rhs[i-1]
-        # Back substitution
-        x = np.zeros(n)
-        x[-1] = rhs[-1]/M[-1]
-        for i in reversed(range(n-1)):
-            x[i] = (rhs[i] - U_[i]*x[i+1]) / M[i]
-        return x
+def backward_euler_vanilla(S0, K, T, r, sigma, dS, dt, option_type):
+    S_max = 2 * max(S0, K) * np.exp(r * T)
+    M = int(round(S_max / dS))
+    N = int(round(T / dt))
+    dS = S_max / M
+    dt = T / N
 
-    def backward_euler_step(U_t):
-        # A = I - M => in components:
-        # for i from 1..M-1:
-        #   U_{t+dt}(i) - alpha_i U_{t+dt}(i-1) - gamma_i U_{t+dt}(i+1)
-        #   = U_t(i) - beta_i U_{t+dt}(i)
-        # We prepared diagL, diagM, diagU for the LHS = (1 + alpha+gamma) on diagonal, etc.
-        # But we must be careful with boundary and forcing terms.
-        # We'll create a copy of the tri-diagonal so as not to overwrite it each step.
-        b = U_t.copy()
-        # apply boundary in b:
-        apply_boundary_conditions(b)
-        # solve the system
-        U_next = solve_tridiagonal(diagL.copy(), diagM.copy(), diagU.copy(), b)
-        # boundary
-        apply_boundary_conditions(U_next)
-        # barrier knock-out
-        apply_knock_out_condition(U_next, S_grid, barrier, barrier_type)
-        return U_next
-
-    def crank_nicolson_step(U_t):
-        # half explicit + half implicit
-        # CN: U_{t+dt} - 0.5*M U_{t+dt} = U_t + 0.5*M U_t
-        # We'll do:
-        #   LHS: (I - 0.5 M)
-        #   RHS: (I + 0.5 M) U_t
-        # Construct M explicitly from alpha, beta, gamma. Then do the factor for half dt.
-        # We'll handle it directly with the tri-diagonal approach:
-        # We'll define an "A" for LHS and "B" for RHS.
-        
-        # Step 1: B * U_t
-        U_star = np.zeros_like(U_t)
-        for i in range(1, len(S_grid)-1):
-            U_star[i] = (U_t[i]
-                         + 0.5 * (alpha[i]*U_t[i-1] + beta[i]*U_t[i] + gamma[i]*U_t[i+1]))
-        
-        # We'll handle boundaries in U_star
-        apply_boundary_conditions(U_star)
-
-        # Now solve (I - 0.5M) U_{t+dt} = U_star
-        # We'll define tri-diagonal for A = I - 0.5*[ tri-diag from alpha, beta, gamma ]
-        # That is:
-        #   A diag : 1 - 0.5*beta[i]
-        #   A lower: -0.5*alpha[i]
-        #   A upper: -0.5*gamma[i]
-        # We already have diagL, diagM, diagU for the backward approach. Let's build new arrays:
-        L_A = np.zeros_like(diagL)
-        M_A = np.zeros_like(diagM)
-        U_A = np.zeros_like(diagU)
-        for i in range(1, len(S_grid)-1):
-            L_A[i] = -0.5 * alpha[i]
-            M_A[i] = 1.0 + 0.5*(alpha[i] + gamma[i])
-            U_A[i] = -0.5 * gamma[i]
-        
-        # Solve
-        U_next = solve_tridiagonal(L_A, M_A, U_A, U_star)
-        # apply boundary conditions
-        apply_boundary_conditions(U_next)
-        # barrier knock-out
-        apply_knock_out_condition(U_next, S_grid, barrier, barrier_type)
-        return U_next
-
-    # Time stepping
-    if method == "forward_euler":
-        for _ in range(N):
-            U = forward_euler_step(U)
-    elif method == "backward_euler":
-        for _ in range(N):
-            U = backward_euler_step(U)
-    elif method == "crank_nicolson":
-        for _ in range(N):
-            U = crank_nicolson_step(U)
+    matval = np.zeros((M + 1, N + 1))
+    vetS = np.linspace(0, S_max, M + 1)
+    # Expiry payoff
+    if option_type == "Call":
+        matval[:, -1] = np.maximum(vetS - K, 0)
     else:
-        raise ValueError("Unknown method")
+        matval[:, -1] = np.maximum(K - vetS, 0)
 
-    return U
+    # Boundary conditions
+    # S=0
+    t_vec = np.linspace(0, T, N + 1)
+    if option_type == "Call":
+        matval[0, :] = 0.0
+        matval[-1, :] = S_max - K * np.exp(-r * (T - t_vec))  # large S boundary
+    else:  # put
+        matval[0, :] = K * np.exp(-r * (T - t_vec))
+        matval[-1, :] = 0.0
 
-def price_knock_in_vanilla(method, S_grid, r, sigma, K, T, M, N,
-                           barrier, barrier_type, option_type):
-    """
-    Price a knock-in barrier option using the relationship:
-    Price(Knock-In) = Price(vanilla) - Price(Knock-Out).
-    This is a commonly used static replication approach.
-    """
-    # Price vanilla European with PDE (no barrier):
-    U_vanilla = price_knock_out_vanilla(method, S_grid, r, sigma, K, T, M, N,
-                                        barrier=np.inf if barrier_type=="up" else -np.inf,
-                                        barrier_type=barrier_type,
-                                        option_type=option_type)
-    # Price knock-out with the actual barrier
-    U_knock_out = price_knock_out_vanilla(method, S_grid, r, sigma, K, T, M, N,
-                                          barrier=barrier,
-                                          barrier_type=barrier_type,
-                                          option_type=option_type)
-    return U_vanilla - U_knock_out
+    # set up the tri-diagonal system
+    i_idx = np.arange(M + 1)
+    a = 0.5 * (r * dt * i_idx - sigma**2 * dt * i_idx**2)
+    b = 1 + sigma**2 * dt * i_idx**2 + r * dt
+    c = -0.5 * (r * dt * i_idx + sigma**2 * dt * i_idx**2)
+
+    # Coeff matrix dimension = (M-1) x (M-1)
+    # We'll build it once, then do an LU factor
+    # For 1..M-1 in i_idx
+    Adata = np.zeros((M - 1, M - 1))
+    for i in range(1, M):
+        # main diagonal
+        Adata[i - 1, i - 1] = b[i]
+        # sub-diagonal
+        if i - 1 >= 1:
+            Adata[i - 1, i - 2] = a[i]
+        # super-diagonal
+        if i <= M - 2:
+            Adata[i - 1, i] = c[i]
+
+    LU, piv = lu_factor(Adata)
+
+    # Time-stepping
+    for j in range(N - 1, -1, -1):
+        # Right-hand side is matval[1:M, j+1], plus adjustments for boundaries
+        rhs = matval[1:M, j + 1].copy()
+        # Adjust for boundary terms:
+        # For a[1], we add -a[1]*matval[0, j], for c[M-1], we add -c[M-1]*matval[M, j]
+        rhs[0] -= a[1] * matval[0, j]
+        rhs[-1] -= c[M - 1] * matval[M, j]
+
+        # Solve
+        sol = lu_solve((LU, piv), rhs)
+        matval[1:M, j] = sol
+
+    price_interp = interp1d(vetS, matval[:, 0], kind='linear', fill_value="extrapolate")
+    price = price_interp(S0)
+    return price, vetS, matval[:, 0]
+
+
+def crank_nicolson_vanilla(S0, K, T, r, sigma, dS, dt, option_type):
+    S_max = 2 * max(S0, K) * np.exp(r * T)
+    M = int(round(S_max / dS))
+    N = int(round(T / dt))
+    dS = S_max / M
+    dt = T / N
+
+    matval = np.zeros((M + 1, N + 1))
+    vetS = np.linspace(0, S_max, M + 1)
+
+    # Final payoff
+    if option_type == "Call":
+        matval[:, -1] = np.maximum(vetS - K, 0)
+    else:
+        matval[:, -1] = np.maximum(K - vetS, 0)
+
+    # BCs
+    t_vec = np.linspace(0, T, N + 1)
+    if option_type == "Call":
+        matval[0, :] = 0.0
+        matval[-1, :] = S_max - K * np.exp(-r * (T - t_vec))
+    else:
+        matval[0, :] = K * np.exp(-r * (T - t_vec))
+        matval[-1, :] = 0.0
+
+    # Build tri-diagonal for CN
+    # alpha, beta, gamma
+    # CN: 0.5 * (explicit + implicit)
+    i_idx = np.arange(M + 1)
+    alpha = 0.25 * dt * (sigma**2 * i_idx**2 - r * i_idx)
+    beta = -0.5 * dt * (sigma**2 * i_idx**2 + r)
+    gamma = 0.25 * dt * (sigma**2 * i_idx**2 + r * i_idx)
+
+    # M1 = (I - 0.5*A), M2 = (I + 0.5*A)
+    # where A is the matrix from alpha, beta, gamma
+    # We'll construct them for i=1..M-1
+    # Diagonal dimension = (M-1)
+    M1 = np.zeros((M - 1, M - 1))
+    M2 = np.zeros((M - 1, M - 1))
+
+    for i in range(1, M):
+        # main diagonal
+        M1[i - 1, i - 1] = 1 - beta[i]
+        M2[i - 1, i - 1] = 1 + beta[i]
+        # sub-diagonal
+        if i - 1 >= 1:
+            M1[i - 1, i - 2] = -alpha[i]
+            M2[i - 1, i - 2] = alpha[i]
+        # super-diagonal
+        if i <= M - 2:
+            M1[i - 1, i] = -gamma[i]
+            M2[i - 1, i] = gamma[i]
+
+    LU1, piv1 = lu_factor(M1)  # factor M1 once
+
+    for j in range(N - 1, -1, -1):
+        # We want M1 * U(., j) = M2 * U(., j+1) + boundary terms
+        rhs = M2 @ matval[1:M, j + 1]
+
+        # Adjust for boundaries in RHS:
+        # The sub/super diagonal can multiply the boundary nodes:
+        # sub-diagonal => alpha[i] * matval[0, j+1]
+        # super-diagonal => gamma[i] * matval[M, j+1]
+        # We'll do an explicit small fix if needed:
+        # left boundary => i=1 => M2[0,0], M2[0,-1]? etc.
+
+        # alpha[1]*matval[0, j+1] and gamma[M-1]*matval[M, j+1]
+        # Actually, we do it more precisely:
+        rhs[0] += alpha[1] * matval[0, j + 1]
+        rhs[-1] += gamma[M - 1] * matval[M, j + 1]
+
+        sol = lu_solve((LU1, piv1), rhs)
+        matval[1:M, j] = sol
+
+    price_interp = interp1d(vetS, matval[:, 0], kind='linear', fill_value="extrapolate")
+    price = price_interp(S0)
+    return price, vetS, matval[:, 0]
 
 ###############################################################################
-# Streamlit App
+# Barrier Logic: Knock-Out PDE
 ###############################################################################
+def forward_euler_knock_out(S0, K, T, r, sigma, dS, dt, option_type,
+                            barrier, barrier_type):
+    """
+    Forward Euler PDE for knock-out barrier:
+      - "up-and-out" => zero the grid for S >= barrier
+      - "down-and-out" => zero the grid for S <= barrier
+    """
+    # We do almost the same logic as forward_euler_vanilla, but each time-step
+    # we enforce that any node that has crossed the barrier is set to 0.
+    # If barrier_type = "up-and-out": zero if S >= barrier
+    # If barrier_type = "down-and-out": zero if S <= barrier
+    S_max = 2 * max(S0, K, barrier) * np.exp(r * T)  # ensure barrier within grid
+    M = int(round(S_max / dS))
+    N = int(round(T / dt))
+    dS = S_max / M
+    dt = T / N
 
-def main():
-    st.title("Barrier Options PDE Pricing (Forward Euler, Backward Euler, Crank–Nicolson)")
-    st.write("""
-    This app prices the eight standard barrier options (Call/Put, Up/Down, In/Out)
-    using finite-difference methods. 
-    """)
+    matval = np.zeros((M + 1, N + 1))
+    vetS = np.linspace(0, S_max, M + 1)
 
-    # Sidebar for user inputs
-    st.sidebar.header("Model Parameters")
-    S0 = st.sidebar.number_input("Spot price (S0)", value=100.0, min_value=0.01, step=1.0)
-    K = st.sidebar.number_input("Strike (K)", value=100.0, min_value=0.01, step=1.0)
-    r = st.sidebar.number_input("Risk-free rate (r)", value=0.05, step=0.01)
-    sigma = st.sidebar.number_input("Volatility (σ)", value=0.2, step=0.01)
-    T = st.sidebar.number_input("Time to maturity (T, in years)", value=1.0, step=0.1)
-    barrier = st.sidebar.number_input("Barrier level (B)", value=110.0, min_value=0.0, step=1.0)
-    M = st.sidebar.slider("Number of space steps (M)", min_value=50, max_value=100000, value=100)
-    N = st.sidebar.slider("Number of time steps (N)", min_value=50, max_value=100000, value=100)
+    # Final condition
+    if option_type == "Call":
+        matval[:, -1] = np.maximum(vetS - K, 0)
+    else:
+        matval[:, -1] = np.maximum(K - vetS, 0)
 
-    st.sidebar.write("### Numerical Scheme")
-    method = st.sidebar.selectbox("Finite-difference method",
-                                  ["forward_euler", "backward_euler", "crank_nicolson"])
+    # Boundaries
+    t_vec = np.linspace(0, T, N + 1)
+    if option_type == "Call":
+        matval[0, :] = 0.0
+        matval[-1, :] = S_max - K * np.exp(-r * (T - t_vec))
+    else:
+        matval[0, :] = K * np.exp(-r * (T - t_vec))
+        matval[-1, :] = 0.0
 
-    # Construct the spatial grid
-    # We'll pick a max S large enough to contain possible movements, e.g. 3-5x barrier or S0.
-    Smax = max(3*barrier, 3*S0, 3*K)
-    Smin = 0.0
-    S_grid = np.linspace(Smin, Smax, M)
+    # PDE coefficients
+    i_idx = np.arange(M + 1)
+    a = 0.5 * dt * (sigma**2 * i_idx**2 - r * i_idx)
+    b = 1 - dt * (sigma**2 * i_idx**2 + r)
+    c = 0.5 * dt * (sigma**2 * i_idx**2 + r * i_idx)
 
-    # We'll compute for all 8 barrier types:
-    # up-and-out, up-and-in, down-and-out, down-and-in for call, and same for put.
-    # Then we plot each on a single graph for demonstration, or we can break them out.
-    results = {}
+    # Helper to apply knock-out
+    def apply_knock_out(Ucol):
+        if barrier_type == "up-and-out":
+            # zero where S >= barrier
+            Ucol[vetS >= barrier] = 0.0
+        elif barrier_type == "down-and-out":
+            # zero where S <= barrier
+            Ucol[vetS <= barrier] = 0.0
 
-    barrier_variants = [
-        ("up-and-out",  "up",    "out"),
-        ("up-and-in",   "up",    "in"),
-        ("down-and-out","down",  "out"),
-        ("down-and-in", "down",  "in")
-    ]
-    option_types = ["call", "put"]
+    # Apply knock-out at expiry
+    apply_knock_out(matval[:, -1])
 
-    for opt_type in option_types:
-        for b_label, b_type, in_out in barrier_variants:
-            label = f"{opt_type} {b_label}"
-            if in_out == "out":
-                U = price_knock_out_vanilla(method, S_grid, r, sigma, K, T, M, N,
-                                            barrier, b_type, opt_type)
-            else:
-                U = price_knock_in_vanilla(method, S_grid, r, sigma, K, T, M, N,
-                                           barrier, b_type, opt_type)
-            # Interpolate to find the price at S0
-            price_at_S0 = np.interp(S0, S_grid, U)
-            results[label] = (S_grid.copy(), U.copy(), price_at_S0)
+    # Time-stepping
+    for j in range(N, 0, -1):
+        for i in range(1, M):
+            matval[i, j - 1] = a[i] * matval[i - 1, j] \
+                               + b[i] * matval[i, j] \
+                               + c[i] * matval[i + 1, j]
+        # After computing the new column j-1, apply knock-out
+        apply_knock_out(matval[:, j - 1])
 
-    # Display results
-    st.header("Results at S0")
-    for label, (s_arr, U_arr, price_s0) in results.items():
-        st.write(f"**{label}**: Price at S0 = {price_s0:.4f}")
+    # Price at S0
+    price_interp = interp1d(vetS, matval[:, 0], kind='linear', fill_value="extrapolate")
+    price = price_interp(S0)
+    return price, vetS, matval[:, 0]
 
-    # Plot
-    st.header("Barrier Option Values vs. Underlying Grid")
-    fig, ax = plt.subplots()
-    for label, (s_arr, U_arr, _) in results.items():
-        ax.plot(s_arr, U_arr, label=label)
-    ax.set_xlabel("Underlying Price S")
-    ax.set_ylabel("Option Value")
-    ax.set_title("Barrier Option Values (by type)")
-    ax.legend()
-    st.pyplot(fig)
 
-if __name__ == "__main__":
-    main()
+# (Similarly, you’d define backward_euler_knock_out(...) and crank_nicolson_knock_out(...).
+#  For brevity, we'll show just the forward euler version in detail.
+#  Below, we implement the others more concisely.)
+def backward_euler_knock_out(S0, K, T, r, sigma, dS, dt, option_type,
+                             barrier, barrier_type):
+    """
+    Backward Euler PDE for knock-out barrier.
+    We'll reuse backward_euler_vanilla, but after each time step we zero out
+    the knocked-out region.
+    """
+    # Solve vanilla PDE first
+    price_van, S_grid, col_t0 = backward_euler_vanilla(S0, K, T, r, sigma, dS, dt, option_type)
+
+    # We actually need the full matrix of values at each time step to apply knockout after each step.
+    # But for simplicity, let's re-implement similarly to forward_euler_knock_out.
+    # This code shows a minimal approach: we'll do the same steps as vanilla but apply
+    # barrier logic after each time step. Implementation approach is analogous.
+    # Due to code length, let's do a simpler approach:
+    #  1) We'll do the same setup
+    #  2) We'll do a time loop
+    #  3) after each solve, apply knockout
+    # (See forward Euler above for a detailed explanation.)
+    
+    S_max = 2 * max(S0, K, barrier) * np.exp(r * T)
+    M = int(round(S_max / dS))
+    N = int(round(T / dt))
+    dS = S_max / M
+    dt = T / N
+    vetS = np.linspace(0, S_max, M + 1)
+
+    matval = np.zeros((M + 1, N + 1))
+    # expiry payoff
+    if option_type == "Call":
+        matval[:, -1] = np.maximum(vetS - K, 0)
+    else:
+        matval[:, -1] = np.maximum(K - vetS, 0)
+
+    # boundaries
+    t_vec = np.linspace(0, T, N + 1)
+    if option_type == "Call":
+        matval[0, :] = 0.0
+        matval[-1, :] = S_max - K * np.exp(-r * (T - t_vec))
+    else:
+        matval[0, :] = K * np.exp(-r * (T - t_vec))
+        matval[-1, :] = 0.0
+
+    # knockout helper
+    def apply_knock_out(Ucol):
+        if barrier_type == "up-and-out":
+            Ucol[vetS >= barrier] = 0.0
+        else:  # down-and-out
+            Ucol[vetS <= barrier] = 0.0
+
+    # apply at expiry
+    apply_knock_out(matval[:, -1])
+
+    # tri-diagonal
+    i_idx = np.arange(M + 1)
+    a = 0.5 * (r * dt * i_idx - sigma**2 * dt * i_idx**2)
+    b = 1 + sigma**2 * dt * i_idx**2 + r * dt
+    c = -0.5 * (r * dt * i_idx + sigma**2 * dt * i_idx**2)
+
+    Adata = np.zeros((M - 1, M - 1))
+    for i in range(1, M):
+        Adata[i - 1, i - 1] = b[i]
+        if i - 1 >= 1:
+            Adata[i - 1, i - 2] = a[i]
+        if i <= M - 2:
+            Adata[i - 1, i] = c[i]
+    LU, piv = lu_factor(Adata)
+
+    # time stepping
+    for j in range(N - 1, -1, -1):
+        rhs = matval[1:M, j + 1].copy()
+        rhs[0] -= a[1] * matval[0, j]
+        rhs[-1] -= c[M - 1] * matval[M, j]
+
+        sol = lu_solve((LU, piv), rhs)
+        matval[1:M, j] = sol
+
+        # apply knockout to new column j
+        apply_knock_out(matval[:, j])
+
+    price_interp = interp1d(vetS, matval[:, 0], kind='linear', fill_value="extrapolate")
+    price = price_interp(S0)
+    return price, vetS, matval[:, 0]
+
+
+def crank_nicolson_knock_out(S0, K, T, r, sigma, dS, dt, option_type,
+                             barrier, barrier_type):
+    """
+    Crank-Nicolson PDE for knock-out barrier.
+    Similar approach: solve each step, then zero out knocked-out region.
+    """
+    # We'll copy the logic from crank_nicolson_vanilla, then apply knockout after each time step.
+    S_max = 2 * max(S0, K, barrier) * np.exp(r * T)
+    M = int(round(S_max / dS))
+    N = int(round(T / dt))
+    dS = S_max / M
+    dt = T / N
+    matval = np.zeros((M + 1, N + 1))
+    vetS = np.linspace(0, S_max, M + 1)
+
+    # payoff
+    if option_type == "Call":
+        matval[:, -1] = np.maximum(vetS - K, 0)
+    else:
+        matval[:, -1] = np.maximum(K - vetS, 0)
+
+    t_vec = np.linspace(0, T, N + 1)
+    if option_type == "Call":
+        matval[0, :] = 0.0
+        matval[-1, :] = S_max - K * np.exp(-r * (T - t_vec))
+    else:
+        matval[0, :] = K * np.exp(-r * (T - t_vec))
+        matval[-1, :] = 0.0
+
+    def apply_knock_out(Ucol):
+        if barrier_type == "up-and-out":
+            Ucol[vetS >= barrier] = 0.0
+        else:
+            Ucol[vetS <= barrier] = 0.0
+
+    apply_knock_out(matval[:, -1])
+
+    i_idx = np.arange(M + 1)
+    alpha = 0.25 * dt * (sigma**2 * i_idx**2 - r * i_idx)
+    beta = -0.5 * dt * (sigma**2 * i_idx**2 + r)
+    gamma = 0.25 * dt * (sigma**2 * i_idx**2 + r * i_idx)
+
+    # M1, M2
+    M1 = np.zeros((M - 1, M - 1))
+    M2 = np.zeros((M - 1, M - 1))
+
+    for i in range(1, M):
+        M1[i - 1, i - 1] = 1 - beta[i]
+        M2[i - 1, i - 1] = 1 + beta[i]
+        if i - 1 >= 1:
+            M1[i - 1, i - 2] = -alpha[i]
+            M2[i - 1, i - 2] = alpha[i]
+        if i <= M - 2:
+            M1[i - 1, i] = -gamma[i]
+            M2[i - 1, i] = gamma[i]
+    LU1, piv1 = lu_factor(M1)
+
+    for j in range(N - 1, -1, -1):
+        rhs = M2 @ matval[1:M, j + 1]
+        # boundary adjustments
+        rhs[0] += alpha[1] * matval[0, j + 1]
+        rhs[-1] += gamma[M - 1] * matval[M, j + 1]
+
+        sol = lu_solve((LU1, piv1), rhs)
+        matval[1:M, j] = sol
+
+        apply_knock_out(matval[:, j])
+
+    price_interp = interp1d(vetS, matval[:, 0], kind='linear', fill_value="extrapolate")
+    price = price_interp(S0)
+    return price, vetS, matval[:, 0]
+
+
+###############################################################################
+# Barrier Pricing Wrapper
+###############################################################################
+def barrier_price(method, S0, K, T, r, sigma, dS, dt, option_type,
+                  barrier, barrier_kind):
+    """
+    barrier_kind in { 'None', 'Up-and-out', 'Down-and-out', 'Up-and-in', 'Down-and-in' }
+    This function calls the appropriate PDE solver.
+    For 'None' => vanilla PDE
+    For 'Knock-out' => PDE with zeroing out
+    For 'Knock-in' => vanilla PDE - knock-out PDE
+    Returns (price_at_S0, S_grid, values_at_S_grid).
+    """
+    # 1) If there's no barrier:
+    if barrier_kind == "None":
+        if method == "Forward Euler":
+            return forward_euler_vanilla(S0, K, T, r, sigma, dS, dt, option_type)
+        elif method == "Backward Euler":
+            return backward_euler_vanilla(S0, K, T, r, sigma, dS, dt, option_type)
+        else:
+            return crank_nicolson_vanilla(S0, K, T, r, sigma, dS, dt, option_type)
+
+    # 2) If it's up-and-out or down-and-out, do knock-out PDE:
+    if barrier_kind == "Up-and-out" or barrier_kind == "Down-and-out":
+        if method == "Forward Euler":
+            return forward_euler_knock_out(S0, K, T, r, sigma, dS, dt, option_type,
+                                           barrier, barrier_kind.split('-')[0].lower())
+        elif method == "Backward Euler":
+            return backward_euler_knock_out(S0, K, T, r, sigma, dS, dt, option_type,
+                                            barrier, barrier_kind.split('-')[0].lower())
+        else:
+            return crank_nicolson_knock_out(S0, K, T, r, sigma, dS, dt, option_type,
+                                            barrier, barrier_kind.split('-')[0].lower())
+
+    # 3) If it's up-and-in or down-and-in => knock-in = vanilla - knock-out
+    if barrier_kind == "Up-and-in" or barrier_kind == "Down-and-in":
+        # first do vanilla
+        if method == "Forward Euler":
+            vanilla_price, S_grid, vanilla_slice = forward_euler_vanilla(
+                S0, K, T, r, sigma, dS, dt, option_type
+            )
+            ko_price, _, ko_slice = forward_euler_knock_out(
+                S0, K, T, r, sigma, dS, dt, option_type, barrier,
+                barrier_kind.split('-')[0].lower()
+            )
+        elif method == "Backward Euler":
+            vanilla_price, S_grid, vanilla_slice = backward_euler_vanilla(
+                S0, K, T, r, sigma, dS, dt, option_type
+            )
+            ko_price, _, ko_slice = backward_euler_knock_out(
+                S0, K, T, r, sigma, dS, dt, option_type, barrier,
+                barrier_kind.split('-')[0].lower()
+            )
+        else:
+            vanilla_price, S_grid, vanilla_slice = crank_nicolson_vanilla(
+                S0, K, T, r, sigma, dS, dt, option_type
+            )
+            ko_price, _, ko_slice = crank_nicolson_knock_out(
+                S0, K, T, r, sigma, dS, dt, option_type, barrier,
+                barrier_kind.split('-')[0].lower()
+            )
+        knock_in_price = vanilla_price - ko_price
+        knock_in_slice = vanilla_slice - ko_slice
+        return knock_in_price, S_grid, knock_in_slice
+
+    # Default fallback (should not happen):
+    return 0.0, np.array([]), np.array([])
+
+###############################################################################
+# Streamlit UI
+###############################################################################
+st.title("Finite-Difference Pricing of Barrier Options (and Vanilla)")
+
+S0 = st.sidebar.number_input("Spot Price (S0)", value=100.0, step=1.0)
+K = st.sidebar.number_input("Strike Price (K)", value=100.0, step=1.0)
+T = st.sidebar.number_input("Time to Maturity (T in years)", value=1.0, step=0.1)
+r = st.sidebar.number_input("Risk-free Rate (r)", value=0.05, step=0.01)
+sigma = st.sidebar.number_input("Volatility (σ)", value=0.2, step=0.01)
+dS = st.sidebar.number_input("Stock Price Step (dS)", value=5.0, step=1.0)
+dt = st.sidebar.number_input("Time Step (dt)", value=0.01, step=0.01)
+option_type = st.sidebar.selectbox("Option Type", ("Call", "Put"))
+
+# New: Barrier
+barrier_kind = st.sidebar.selectbox(
+    "Barrier Type",
+    ["None", "Up-and-out", "Down-and-out", "Up-and-in", "Down-and-in"]
+)
+barrier_level = 0.0
+if barrier_kind != "None":
+    barrier_level = st.sidebar.number_input("Barrier Level", value=120.0, step=1.0)
+
+numerical_method = st.sidebar.selectbox(
+    "Numerical method",
+    ("Forward Euler", "Backward Euler", "Crank-Nicolson")
+)
+
+# Price the chosen barrier (or vanilla) with the selected FD method
+price, S_grid, fd_prices = barrier_price(
+    numerical_method, S0, K, T, r, sigma, dS, dt,
+    option_type, barrier_level, barrier_kind
+)
+
+# We'll also show the standard Black-Scholes curve (which is for a *vanilla* option),
+# just for reference. Note that for barrier options, there's no direct match to this
+# vanilla line, but it's illustrative to see the difference.
+vanilla_bs_prices = np.array([black_scholes(s, K, T, r, sigma, option_type) for s in S_grid])
+bs_price_at_S0 = black_scholes(S0, K, T, r, sigma, option_type)
+
+# Show a table comparing PDE vs. vanilla Black-Scholes (the latter is only correct for "None")
+df = pd.DataFrame({
+    "FD Price (at S0)": [np.round(price, 4)],
+    "Vanilla B-S (at S0)": [bs_price_at_S0],
+    "Absolute Error vs. Vanilla?": [abs(price - bs_price_at_S0)]
+})
+st.subheader(f"Computed Price at S0 ({barrier_kind})")
+st.table(df)
+
+# Plot
+st.subheader("Comparison of FD Price Curve vs. Vanilla Black-Scholes")
+fig = go.Figure()
+# FD prices
+fig.add_trace(go.Scatter(
+    x=S_grid, 
+    y=fd_prices, 
+    mode="markers", 
+    name=f"FD {barrier_kind}",
+    marker=dict(color="red", size=5)
+))
+# Vanilla BS
+fig.add_trace(go.Scatter(
+    x=S_grid, 
+    y=vanilla_bs_prices, 
+    mode="lines", 
+    name="Vanilla Black-Scholes",
+    line=dict(color="blue", width=2)
+))
+fig.update_layout(
+    title=f"PDE vs. Vanilla B-S (Barrier: {barrier_kind})",
+    xaxis_title="Stock Price (S)",
+    yaxis_title="Option Price",
+    legend_title="Method",
+    width=800,
+    height=500
+)
+st.plotly_chart(fig)
+
+st.write("""
+**Note**:  
+- If "Barrier Type" is "None", the PDE line should match the vanilla Black–Scholes line more closely for sufficiently small dS and dt.  
+- For actual barrier options ("Knock-Out" or "Knock-In"), there's no direct Black–Scholes line in this code, so we plot the vanilla curve for reference only.  
+- "Knock-In = Vanilla − Knock-Out" is a standard replication approach.  
+- You can refine the numerical accuracy by decreasing dt and dS, but it may slow down the computation.
+""")
