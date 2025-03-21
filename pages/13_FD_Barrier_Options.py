@@ -1413,6 +1413,7 @@ import numpy as np
 import plotly.graph_objects as go
 from scipy.stats import norm
 from scipy.interpolate import interp1d
+from scipy.linalg import lu_factor, lu_solve
 
 def calc_d1(S0, K, r, q, sigma, T):
     return (np.log(S0 / K) + (r - q + 0.5 * sigma**2)*T) / (sigma * np.sqrt(T))
@@ -1761,8 +1762,9 @@ def forward_euler_vanilla_put(S0, K, T, r, sigma, dS, dt):
     t_arr = np.linspace(0, T, N+1)
     for i in range(N+1):
         tau = T - t_arr[i]
-        V[i, 0] = 100
+        V[i, 0] = 0
         V[i, -1] = K*np.exp(-r*tau)
+        #V[i,-1] = 0
 
     # PDE Coeffs
     j_arr = np.arange(M+1)
@@ -1781,72 +1783,7 @@ def forward_euler_vanilla_put(S0, K, T, r, sigma, dS, dt):
     return priceVan, S_grid, V[0,:]
 
 
-# ################################################################################
-# # 3) PDE for a Down-and-Out Call on [0, S_max]
-# #    Force the option = 0 if S <= barrier
-# ################################################################################
-# def forward_euler_down_out_call(S0, K, T, r, sigma, dS, dt, barrier):
-#     """
-#     Solve PDE for a down-and-out call on [0, S_max].
-#     We'll zero out the payoff & values for S <= barrier.
-#     """
-#     S_max = 2 * max(S0, K) * np.exp(r*T)
-#     M = int(S_max / dS)
-#     N = int(T / dt)
-#     dS = S_max / M
-#     dt = T / N
 
-#     S_grid = np.linspace(0, S_max, M+1)
-#     V = np.zeros((N+1, M+1))
-
-#     # Terminal payoff: call for S>barrier, else 0
-#     payoff = np.maximum(S_grid - K, 0.0)
-#     payoff[S_grid <= barrier] = 0.0
-#     V[-1,:] = payoff
-
-#     # Boundaries
-#     t_arr = np.linspace(0, T, N+1)
-#     for i in range(N+1):
-#         tau = T - t_arr[i]
-#         V[i, 0]   = 0.0
-#         V[i, -1]  = S_max - K*np.exp(-r*tau)
-
-#     # PDE Coeffs
-#     j_arr = np.arange(M+1)
-#     a = 0.5*dt*(sigma**2 * j_arr**2 - r*j_arr)
-#     b = 1.0 - dt*(sigma**2*j_arr**2 + r)
-#     c = 0.5*dt*(sigma**2 * j_arr**2 + r*j_arr)
-
-#     # Forward Euler stepping
-#     for n in range(N, 0, -1):
-#         for j in range(1, M):
-#             V[n-1, j] = a[j]*V[n, j-1] + b[j]*V[n, j] + c[j]*V[n, j+1]
-#         # zero out for S <= barrier
-#         for j in range(M+1):
-#             if S_grid[j] <= barrier:
-#                 V[n-1, j] = 0.0
-
-#     # Interpolate to get price at S0
-#     interp_fn = interp1d(S_grid, V[0,:], kind='linear', fill_value='extrapolate')
-#     priceDoc = float(interp_fn(S0))
-#     return priceDoc, S_grid, V[0,:]
-
-
-# ################################################################################
-# # 4) Down-and-In Call = Vanilla - Down-and-Out
-# ################################################################################
-# def forward_euler_down_in_call(S0, K, T, r, sigma, dS, dt, barrier):
-#     """
-#     PDE approach: down-in = vanilla - down-out
-#     """
-#     priceVan, S_gridV, PDE_van = forward_euler_vanilla_call(S0, K, T, r, sigma, dS, dt)
-#     priceDoc, S_gridD, PDE_doc = forward_euler_down_out_call(S0, K, T, r, sigma, dS, dt, barrier)
-
-#     # Subtract
-#     PDE_din = PDE_van - PDE_doc
-#     priceDin = priceVan - priceDoc
-
-#     return priceDin, S_gridV, PDE_din  # both PDE arrays on the same domain [0,S_max]
 
 def forward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type):
     if option_type == "down-and-out call":
@@ -1963,7 +1900,8 @@ def forward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type):
         for i in range(N+1):
             tau = T - t_arr[i]
             V[i, 0]   = 0.0
-            V[i, -1]  = 0.0
+            #V[i, -1]  = 0.0
+            V[i, -1]  = K * np.exp(-r*tau)
 
         # PDE Coeffs
         j_arr = np.arange(M+1)
@@ -2007,6 +1945,7 @@ def forward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type):
             tau = T - t_arr[i]
             V[i, 0]   =0.0
             V[i, -1]  = K * np.exp(-r*tau)
+            #V[i,-1] = 0
 
         # PDE Coeffs
         j_arr = np.arange(M+1)
@@ -2220,7 +2159,148 @@ def forward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type):
                             
         
     return None
+
+def backward_euler_vanilla_put(S0, K, T, r, sigma, dS, dt):
+    # set up grid and adjust increments if necessary
+    Smax = 2*max(S0,K)*np.exp(r*T)
+    M = round(Smax / dS)
+    dS = Smax / M
+    N = round(T / dt)
+    dt = T / N
+    matval = np.zeros((M + 1, N + 1))
+    vetS = np.linspace(0, Smax, M + 1)
+    veti = np.arange(0, M + 1)
+    vetj = np.arange(0, N + 1)
+    
+    matval[:, -1] = np.maximum(K - vetS, 0)
+    matval[0, :] = K * np.exp(-r * (T - np.linspace(0, T, N + 1)))
+    matval[-1, :] = 0
+    
+    # set up the tridiagonal coefficients matrix
+    a = 0.5 * (r * dt * veti - sigma**2 * dt * (veti**2))
+    b = 1 + sigma**2 * dt * (veti**2) + r * dt
+    c = -0.5 * (r * dt * veti + sigma**2 * dt * (veti**2))
+    coeff = np.diag(a[2:M], -1) + np.diag(b[1:M]) + np.diag(c[1:M-1], 1)
+    #lu, piv = lu_factor(coeff)
+    
         
+    LU, piv = lu_factor(coeff)  # Equivalent to MATLAB's [L, U] = lu(coeff)
+
+        # Solve the sequence of linear systems
+    aux = np.zeros(M-1)
+
+    for j in range(N-1, -1, -1):  # Reverse loop from N to 1
+        aux[0] = -a[1] * matval[0, j]  # Adjust indexing for Python (0-based)
+    
+            # Solve L(Ux) = b using LU decomposition
+        matval[1:M, j] = lu_solve((LU, piv), matval[1:M, j+1] + aux)
+         
+    price_interp = interp1d(vetS, matval[:, 0], kind='linear', fill_value="extrapolate")
+    price = price_interp(S0)
+        
+    return price, vetS, matval[:, 0]
+
+def backward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type):
+        if option_type == "up-and-out put":
+            S_max = 2 * max(S0, K) * np.exp(r*T)
+            M = int(S_max / dS)
+            N = int(T / dt)
+            dS = S_max / M
+            dt = T / N
+            vetS = np.linspace(0, S_max, M + 1)
+            veti = np.arange(0, M + 1)
+            vetj = np.arange(0, N + 1)
+    
+
+            #S_grid = np.linspace(0, S_max, M+1)
+            matval = np.zeros((M+1, N+1))
+
+            # Terminal payoff: call for S>barrier, else 0
+            payoff = np.maximum(K - vetS, 0.0)
+            payoff[vetS >= barrier] = 0.0
+            matval[:,-1] = payoff
+            
+                    
+            # Boundaries
+            t_arr = np.linspace(0, T, N+1)
+            matval[0, :]   = 0.0
+            matval[-1, :]  = 0.0
+
+            # PDE Coeffs
+            a = 0.5 * (r * dt * veti - sigma**2 * dt * (veti**2))
+            b = 1 + sigma**2 * dt * (veti**2) + r * dt
+            c = -0.5 * (r * dt * veti + sigma**2 * dt * (veti**2))
+            coeff = np.diag(a[2:M], -1) + np.diag(b[1:M]) + np.diag(c[1:M-1], 1)
+            # Forward Euler stepping
+            LU, piv = lu_factor(coeff)  # Equivalent to MATLAB's [L, U] = lu(coeff)
+
+        # Solve the sequence of linear systems
+            aux = np.zeros(M-1)
+
+            for j in range(N-1, -1, -1):  # Reverse loop from N to 1
+                aux[0] = -a[1] * matval[0, j]  # Adjust indexing for Python (0-based)
+    
+            # Solve L(Ux) = b using LU decomposition
+                matval[1:M, j] = lu_solve((LU, piv), matval[1:M, j+1] + aux)
+         
+            price_interp = interp1d(vetS, matval[:, 0], kind='linear', fill_value="extrapolate")
+            priceUop = price_interp(S0)     
+            return priceUop, vetS, matval[:,0]
+    
+        elif option_type == "up-and-in put":
+            S_max = 2 * max(S0, K) * np.exp(r*T)
+            M = int(S_max / dS)
+            N = int(T / dt)
+            dS = S_max / M
+            dt = T / N
+            vetS = np.linspace(0, S_max, M + 1)
+            veti = np.arange(0, M + 1)
+            vetj = np.arange(0, N + 1)
+    
+
+            #S_grid = np.linspace(0, S_max, M+1)
+            matval = np.zeros((M+1, N+1))
+
+            # Terminal payoff: call for S>barrier, else 0
+            payoff = np.maximum(K - vetS, 0.0)
+            payoff[vetS >= barrier] = 0.0
+            matval[:,-1] = payoff
+            
+                    
+            # Boundaries
+            t_arr = np.linspace(0, T, N+1)
+            matval[0, :]   = 0.0
+            matval[-1, :]  = 0.0
+
+            # PDE Coeffs
+            a = 0.5 * (r * dt * veti - sigma**2 * dt * (veti**2))
+            b = 1 + sigma**2 * dt * (veti**2) + r * dt
+            c = -0.5 * (r * dt * veti + sigma**2 * dt * (veti**2))
+            coeff = np.diag(a[2:M], -1) + np.diag(b[1:M]) + np.diag(c[1:M-1], 1)
+            # Forward Euler stepping
+            LU, piv = lu_factor(coeff)  # Equivalent to MATLAB's [L, U] = lu(coeff)
+
+        # Solve the sequence of linear systems
+            aux = np.zeros(M-1)
+
+            for j in range(N-1, -1, -1):  # Reverse loop from N to 1
+                aux[0] = -a[1] * matval[0, j]  # Adjust indexing for Python (0-based)
+    
+            # Solve L(Ux) = b using LU decomposition
+                matval[1:M, j] = lu_solve((LU, piv), matval[1:M, j+1] + aux)
+         
+            price_interp = interp1d(vetS, matval[:, 0], kind='linear', fill_value="extrapolate")
+            priceUop = price_interp(S0)     
+            
+            priceVan, S_gridV, PDE_van = backward_euler_vanilla_put(S0, K, T, r, sigma, dS, dt)
+            
+            PDE_uinp = PDE_van - matval[:,0]
+            priceUip = priceVan - priceUop
+            
+            return priceUip, S_gridV, PDE_uinp      
+                            
+        
+        return None
 
 ################################################################################
 # 5) The Streamlit app
@@ -2271,12 +2351,56 @@ def app():
             if val is None or val < 0:
                 val = 0.0
             analytic_vals.append(val)
-
+            
+        new_pde = PDE_sol[1:]
         # 3) Plot PDE vs Analytical
         fig = go.Figure()
         fig.add_trace(go.Scatter(
             x=S_grid, 
-            y=PDE_sol, 
+            #y=PDE_sol, 
+            y = new_pde,
+            mode="markers+lines", 
+            name="PDE Solution"
+        ))
+        fig.add_trace(go.Scatter(
+            x=S_grid,
+            y=analytic_vals,
+            mode="lines",
+            name="Analytical "+option_type
+        ))
+        fig.update_layout(
+            title= option_type+" vs Analytical",
+            xaxis_title="Stock Price (S)",
+            yaxis_title="Option Value"
+        )
+        st.plotly_chart(fig)
+        
+    elif numerical_method == "Backward Euler":
+    # 1) PDE solution for down-and-in
+        #priceDin, S_grid, PDE_din = forward_euler_down_in_call(S0, K, T, r, sigma, dS, dt, barrier)
+        priceSol, S_grid, PDE_sol = backward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type)
+        
+
+        st.write(f"**PDE price at S0** = {priceSol:.4f}")
+
+        # 2) Evaluate the closed-form formula over the same S_grid
+        #    for "down-and-in call"
+        analytic_vals = []
+        for s in S_grid:
+            val = barrier_option_price(s, K, T, r, q, sigma, barrier, option_type)
+            # Some formulas may return None if input is out of domain logic.
+            # We'll assume 0 if None is returned.
+            if val is None or val < 0:
+                val = 0.0
+            analytic_vals.append(val)
+            
+        new_pde = PDE_sol[1:]
+        # 3) Plot PDE vs Analytical
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=S_grid, 
+            #y=PDE_sol, 
+            y = new_pde,
             mode="markers+lines", 
             name="PDE Solution"
         ))
