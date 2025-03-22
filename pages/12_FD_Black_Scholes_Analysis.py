@@ -62,6 +62,67 @@ def forward_euler(S0, K, T, r, sigma, dS, dt, option_type):
                     
         return price, vetS, matval[:, 0]
 
+# def forward_euler(S0, K, T, r, sigma, dS, dt, option_type):
+#     """
+#     Forward Euler PDE for a vanilla European call on [0, S_max].
+#     Returns: (priceVan, S_grid, V0).
+#     """
+#     S_max = 2 * max(S0, K) * np.exp(r * T)
+#     M = int(S_max / dS)
+#     N = int(T / dt)
+#     dS = S_max / M  # adjust
+#     dt = T / N      # adjust
+
+#     S_grid = np.linspace(0, S_max, M + 1)
+#     V = np.zeros((N + 1, M + 1))
+
+#     if option_type == "Call":
+#         # Terminal payoff
+#         V[-1, :] = np.maximum(S_grid - K, 0.0)
+
+#         # Time array
+#         t_arr = np.linspace(0, T, N + 1)
+
+#         # Boundary conditions:
+#         #   - at S=0: call is 0
+#         #   - at S=S_max: call ~ S_max - K e^{-r tau}
+#         for i in range(N + 1):
+#             tau = T - t_arr[i]
+#             V[i, 0]   = 0.0
+#             V[i, -1]  = S_max - K * np.exp(-r * tau)
+    
+#     else: 
+#             # Terminal payoff
+#         V[-1, :] = np.maximum(K - S_grid, 0.0)
+
+#         # Time array
+#         t_arr = np.linspace(0, T, N + 1)
+
+#         # Boundary conditions for a put:
+#         #   - at S=0:  put is ~ K e^{-r tau}
+#         #   - at S=S_max: put is ~ 0
+#         for i in range(N + 1):
+#             tau = T - t_arr[i]
+#             V[i, 0]   = K * np.exp(-r * tau)  # deep in-the-money for a put
+#             V[i, -1]  = 0.0
+
+#     # PDE coefficients
+#     j_arr = np.arange(M + 1)
+#     a = 0.5 * dt * (sigma**2 * j_arr**2 - r * j_arr)
+#     b = 1.0 - dt * (sigma**2 * j_arr**2 + r)
+#     c = 0.5 * dt * (sigma**2 * j_arr**2 + r * j_arr)
+
+#     # Forward Euler stepping: from n=N down to n=1
+#     for n in range(N, 0, -1):
+#         for j in range(1, M):
+#             V[n - 1, j] = a[j] * V[n, j - 1] + b[j] * V[n, j] + c[j] * V[n, j + 1]
+
+#     # Interpolate to get the price at S0
+#     interp_fn = interp1d(S_grid, V[0, :], kind='linear', fill_value='extrapolate')
+#     priceVan = float(interp_fn(S0))
+#     return priceVan, S_grid, V[0, :]
+
+
 def backward_euler(S0, K, r, T, sigma, dS, dt, option_type):
     # set up grid and adjust increments if necessary
     Smax = 2*max(S0,K)*np.exp(r*T)
