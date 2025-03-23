@@ -2010,464 +2010,7 @@ def forward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type):
         return priceUIP, Sg_van, PDE_uip
 
     return None
-# def forward_euler_vanilla_call(S0, K, T, r, sigma, dS, dt):
-#     """
-#     Forward Euler PDE for a vanilla European call on [0, S_max].
-#     Returns: (priceVan, S_grid, V0) => scalar price at S0, S-array, PDE values at time 0.
-#     """
-#     S_max = 2 * max(S0, K) * np.exp(r*T)
-#     M = int(S_max / dS)
-#     N = int(T / dt)
-#     dS = S_max / M
-#     dt = T / N
 
-#     S_grid = np.linspace(0, S_max, M + 1)
-#     V = np.zeros((N + 1, M + 1))
-
-#     # Terminal payoff
-#     V[-1, :] = np.maximum(S_grid - K, 0.0)
-
-#     # Boundary conditions
-#     t_arr = np.linspace(0, T, N+1)
-#     for i in range(N+1):
-#         tau = T - t_arr[i]
-#         V[i, 0] = 0.0
-#         V[i, -1] = S_max - K*np.exp(-r*tau)
-
-#     # PDE Coeffs
-#     j_arr = np.arange(M+1)
-#     a = 0.5*dt*(sigma**2 * j_arr**2 - r*j_arr)
-#     b = 1.0 - dt*(sigma**2*j_arr**2 + r)
-#     c = 0.5*dt*(sigma**2 * j_arr**2 + r*j_arr)
-
-#     # Forward Euler stepping
-#     for n in range(N, 0, -1):
-#         for j in range(1, M):
-#             V[n-1, j] = a[j]*V[n, j-1] + b[j]*V[n, j] + c[j]*V[n, j+1]
-
-#     # Interpolate to get price at S0
-#     interp_fn = interp1d(S_grid, V[0,:], kind='linear', fill_value='extrapolate')
-#     priceVan = float(interp_fn(S0))
-#     return priceVan, S_grid, V[0,:]
-
-# def forward_euler_vanilla_put(S0, K, T, r, sigma, dS, dt):
-#     """
-#     Forward Euler PDE for a vanilla European call on [0, S_max].
-#     Returns: (priceVan, S_grid, V0) => scalar price at S0, S-array, PDE values at time 0.
-#     """
-#     S_max = 2 * max(S0, K) * np.exp(r*T)
-#     M = int(S_max / dS)
-#     N = int(T / dt)
-#     dS = S_max / M
-#     dt = T / N
-
-#     S_grid = np.linspace(0, S_max, M + 1)
-#     V = np.zeros((N + 1, M + 1))
-
-#     # Terminal payoff
-#     V[-1, :] = np.maximum(K - S_grid, 0.0)
-
-#     # Boundary conditions
-#     t_arr = np.linspace(0, T, N+1)
-#     for i in range(N+1):
-#         tau = T - t_arr[i]
-#         V[i, 0] = 0
-#         V[i, -1] = K*np.exp(-r*tau)
-#         #V[i,-1] = 0
-
-#     # PDE Coeffs
-#     j_arr = np.arange(M+1)
-#     a = 0.5*dt*(sigma**2 * j_arr**2 - r*j_arr)
-#     b = 1.0 - dt*(sigma**2*j_arr**2 + r)
-#     c = 0.5*dt*(sigma**2 * j_arr**2 + r*j_arr)
-
-#     # Forward Euler stepping
-#     for n in range(N, 0, -1):
-#         for j in range(1, M):
-#             V[n-1, j] = a[j]*V[n, j-1] + b[j]*V[n, j] + c[j]*V[n, j+1]
-
-#     # Interpolate to get price at S0
-#     interp_fn = interp1d(S_grid, V[0,:], kind='linear', fill_value='extrapolate')
-#     priceVan = float(interp_fn(S0))
-#     return priceVan, S_grid, V[0,:]
-
-
-
-
-# def forward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type):
-#     if option_type == "down-and-out call":
-#         """
-#         Solve PDE for a down-and-out call on [0, S_max].
-#         We'll zero out the payoff & values for S <= barrier.
-#         """
-#         S_max = 2 * max(S0, K) * np.exp(r*T)
-#         M = int(S_max / dS)
-#         N = int(T / dt)
-#         dS = S_max / M
-#         dt = T / N
-
-#         S_grid = np.linspace(0, S_max, M+1)
-#         V = np.zeros((N+1, M+1))
-
-#         # Terminal payoff: call for S>barrier, else 0
-#         payoff = np.maximum(S_grid - K, 0.0)
-#         payoff[S_grid <= barrier] = 0.0
-#         V[-1,:] = payoff
-
-#         # Boundaries
-#         t_arr = np.linspace(0, T, N+1)
-#         for i in range(N+1):
-#             tau = T - t_arr[i]
-#             V[i, 0]   = 0.0
-#             V[i, -1]  = S_max - K*np.exp(-r*tau)
-
-#         # PDE Coeffs
-#         j_arr = np.arange(M+1)
-#         a = 0.5*dt*(sigma**2 * j_arr**2 - r*j_arr)
-#         b = 1.0 - dt*(sigma**2*j_arr**2 + r)
-#         c = 0.5*dt*(sigma**2 * j_arr**2 + r*j_arr)
-
-#         # Forward Euler stepping
-#         for n in range(N, 0, -1):
-#             for j in range(1, M):
-#                 V[n-1, j] = a[j]*V[n, j-1] + b[j]*V[n, j] + c[j]*V[n, j+1]
-#             # zero out for S <= barrier
-#             for j in range(M+1):
-#                 if S_grid[j] <= barrier:
-#                     V[n-1, j] = 0.0
-
-#         # Interpolate to get price at S0
-#         interp_fn = interp1d(S_grid, V[0,:], kind='linear', fill_value='extrapolate')
-#         priceDoc = float(interp_fn(S0))
-#         return priceDoc, S_grid, V[0,:]
-    
-#     elif option_type == "down-and-in call":
-#         S_max = 2 * max(S0, K) * np.exp(r*T)
-#         M = int(S_max / dS)
-#         N = int(T / dt)
-#         dS = S_max / M
-#         dt = T / N
-
-#         S_grid = np.linspace(0, S_max, M+1)
-#         V = np.zeros((N+1, M+1))
-
-#         # Terminal payoff: call for S>barrier, else 0
-#         payoff = np.maximum(S_grid - K, 0.0)
-#         payoff[S_grid <= barrier] = 0.0
-#         V[-1,:] = payoff
-
-#         # Boundaries
-#         t_arr = np.linspace(0, T, N+1)
-#         for i in range(N+1):
-#             tau = T - t_arr[i]
-#             V[i, 0]   = 0.0
-#             V[i, -1]  = S_max - K*np.exp(-r*tau)
-
-#         # PDE Coeffs
-#         j_arr = np.arange(M+1)
-#         a = 0.5*dt*(sigma**2 * j_arr**2 - r*j_arr)
-#         b = 1.0 - dt*(sigma**2*j_arr**2 + r)
-#         c = 0.5*dt*(sigma**2 * j_arr**2 + r*j_arr)
-
-#         # Forward Euler stepping
-#         for n in range(N, 0, -1):
-#             for j in range(1, M):
-#                 V[n-1, j] = a[j]*V[n, j-1] + b[j]*V[n, j] + c[j]*V[n, j+1]
-#             # zero out for S <= barrier
-#             for j in range(M+1):
-#                 if S_grid[j] <= barrier:
-#                     V[n-1, j] = 0.0
-
-#         # Interpolate to get price at S0
-#         interp_fn = interp1d(S_grid, V[0,:], kind='linear', fill_value='extrapolate')
-#         priceDoc = float(interp_fn(S0))
-        
-#         priceVan, S_gridV, PDE_van = forward_euler_vanilla_call(S0, K, T, r, sigma, dS, dt)
-        
-#         PDE_din = PDE_van - V[0,:]
-#         priceDin = priceVan - priceDoc
-        
-#         return priceDin, S_gridV, PDE_din
-    
-#     elif option_type == "down-and-out put":
-#         S_max = 2 * max(S0, K) * np.exp(r*T)
-#         M = int(S_max / dS)
-#         N = int(T / dt)
-#         dS = S_max / M
-#         dt = T / N
-
-#         S_grid = np.linspace(0, S_max, M+1)
-#         V = np.zeros((N+1, M+1))
-
-#         # Terminal payoff: call for S>barrier, else 0
-#         payoff = np.maximum(K - S_grid, 0.0)
-#         payoff[S_grid <= barrier] = 0.0
-#         V[-1,:] = payoff
-
-#         # Boundaries
-#         t_arr = np.linspace(0, T, N+1)
-#         for i in range(N+1):
-#             tau = T - t_arr[i]
-#             V[i, 0]   = K * np.exp(-r*tau)
-#             V[i, -1]  = 0.0
-#             #V[i, -1]  = K * np.exp(-r*tau)
-
-#         # PDE Coeffs
-#         j_arr = np.arange(M+1)
-#         a = 0.5*dt*(sigma**2 * j_arr**2 - r*j_arr)
-#         b = 1.0 - dt*(sigma**2*j_arr**2 + r)
-#         c = 0.5*dt*(sigma**2 * j_arr**2 + r*j_arr)
-
-#         # Forward Euler stepping
-#         for n in range(N, 0, -1):
-#             for j in range(1, M):
-#                 V[n-1, j] = a[j]*V[n, j-1] + b[j]*V[n, j] + c[j]*V[n, j+1]
-#             # zero out for S <= barrier
-#             for j in range(M+1):
-#                 if S_grid[j] <= barrier:
-#                     V[n-1, j] = 0.0
-
-#         # Interpolate to get price at S0
-#         interp_fn = interp1d(S_grid, V[0,:], kind='linear', fill_value='extrapolate')
-#         priceDop = float(interp_fn(S0))
-#         return priceDop, S_grid, V[0,:]
-    
-#     elif option_type == "down-and-in put":
-#         S_max = 2 * max(S0, K) * np.exp(r*T)
-#         M = int(S_max / dS)
-#         N = int(T / dt)
-#         dS = S_max / M
-#         dt = T / N
-
-#         S_grid = np.linspace(0, S_max, M+1)
-#         V = np.zeros((N+1, M+1))
-
-#         # Terminal payoff: call for S>barrier, else 0
-#         payoff = np.maximum(K - S_grid, 0.0)
-#         payoff[S_grid <= barrier] = 0.0
-#         V[-1,:] = payoff
-        
-                
-#         # Boundaries
-#         t_arr = np.linspace(0, T, N+1)
-#         for i in range(N+1):
-#             tau = T - t_arr[i]
-#             V[i, 0]   =0.0
-#             V[i, -1]  = K * np.exp(-r*tau)
-#             #V[i,-1] = 0
-
-#         # PDE Coeffs
-#         j_arr = np.arange(M+1)
-#         a = 0.5*dt*(sigma**2 * j_arr**2 - r*j_arr)
-#         b = 1.0 - dt*(sigma**2*j_arr**2 + r)
-#         c = 0.5*dt*(sigma**2 * j_arr**2 + r*j_arr)
-
-#         # Forward Euler stepping
-#         for n in range(N, 0, -1):
-#             for j in range(1, M):
-#                 V[n-1, j] = a[j]*V[n, j-1] + b[j]*V[n, j] + c[j]*V[n, j+1]
-#             # zero out for S <= barrier
-#             for j in range(M+1):
-#                 if S_grid[j] <= barrier:
-#                     V[n-1, j] = 0
-
-#         # Interpolate to get price at S0
-#         interp_fn = interp1d(S_grid, V[0,:], kind='linear', fill_value='extrapolate')
-#         priceDop = float(interp_fn(S0))
-            
-#         priceVan, S_gridV, PDE_van = forward_euler_vanilla_put(S0, K, T, r, sigma, dS, dt)
-        
-#         PDE_dinp = PDE_van - V[0,:]
-#         priceDip = priceVan - priceDop
-        
-#         return priceDip, S_gridV, PDE_dinp
-    
-#     elif option_type == "up-and-out call":
-#         S_max = 2 * max(S0, K) * np.exp(r*T)
-#         M = int(S_max / dS)
-#         N = int(T / dt)
-#         dS = S_max / M
-#         dt = T / N
-
-#         S_grid = np.linspace(0, S_max, M+1)
-#         V = np.zeros((N+1, M+1))
-
-#         # Terminal payoff: call for S>barrier, else 0
-#         payoff = np.maximum(S_grid - K, 0.0)
-#         payoff[S_grid >= barrier] = 0.0
-#         V[-1,:] = payoff
-        
-                
-#         # Boundaries
-#         t_arr = np.linspace(0, T, N+1)
-#         for i in range(N+1):
-#             tau = T - t_arr[i]
-#             V[i, 0]   = 0.0
-#             V[i, -1]  = 0.0
-
-#         # PDE Coeffs
-#         j_arr = np.arange(M+1)
-#         a = 0.5*dt*(sigma**2 * j_arr**2 - r*j_arr)
-#         b = 1.0 - dt*(sigma**2*j_arr**2 + r)
-#         c = 0.5*dt*(sigma**2 * j_arr**2 + r*j_arr)
-
-#         # Forward Euler stepping
-#         for n in range(N, 0, -1):
-#             for j in range(1, M):
-#                 V[n-1, j] = a[j]*V[n, j-1] + b[j]*V[n, j] + c[j]*V[n, j+1]
-#             # zero out for S <= barrier
-#             for j in range(M+1):
-#                 if S_grid[j] >= barrier:
-#                     V[n-1, j] = 0.0
-
-#         # Interpolate to get price at S0
-#         interp_fn = interp1d(S_grid, V[0,:], kind='linear', fill_value='extrapolate')
-#         priceUoc = float(interp_fn(S0))        
-#         return priceUoc, S_grid, V[0,:]
-    
-#     elif option_type == "up-and-in call":
-#         S_max = 2 * max(S0, K) * np.exp(r*T)
-#         M = int(S_max / dS)
-#         N = int(T / dt)
-#         dS = S_max / M
-#         dt = T / N
-
-#         S_grid = np.linspace(0, S_max, M+1)
-#         V = np.zeros((N+1, M+1))
-
-#         # Terminal payoff: call for S>barrier, else 0
-#         payoff = np.maximum(S_grid - K, 0.0)
-#         payoff[S_grid >= barrier] = 0.0
-#         V[-1,:] = payoff
-        
-                
-#         # Boundaries
-#         t_arr = np.linspace(0, T, N+1)
-#         for i in range(N+1):
-#             tau = T - t_arr[i]
-#             V[i, 0]   = 0.0
-#             V[i, -1]  = 0.0
-
-#         # PDE Coeffs
-#         j_arr = np.arange(M+1)
-#         a = 0.5*dt*(sigma**2 * j_arr**2 - r*j_arr)
-#         b = 1.0 - dt*(sigma**2*j_arr**2 + r)
-#         c = 0.5*dt*(sigma**2 * j_arr**2 + r*j_arr)
-
-#         # Forward Euler stepping
-#         for n in range(N, 0, -1):
-#             for j in range(1, M):
-#                 V[n-1, j] = a[j]*V[n, j-1] + b[j]*V[n, j] + c[j]*V[n, j+1]
-#             # zero out for S <= barrier
-#             for j in range(M+1):
-#                 if S_grid[j] >= barrier:
-#                     V[n-1, j] = 0.0
-
-#         # Interpolate to get price at S0
-#         interp_fn = interp1d(S_grid, V[0,:], kind='linear', fill_value='extrapolate')
-#         priceUoc = float(interp_fn(S0))     
-
-#         priceVan, S_gridV, PDE_van = forward_euler_vanilla_call(S0, K, T, r, sigma, dS, dt)
-        
-#         PDE_uinc = PDE_van - V[0,:]
-#         priceUic = priceVan - priceUoc
-        
-#         return priceUic, S_gridV, PDE_uinc      
-               
-#     elif option_type == "up-and-out put":
-#         S_max = 2 * max(S0, K) * np.exp(r*T)
-#         M = int(S_max / dS)
-#         N = int(T / dt)
-#         dS = S_max / M
-#         dt = T / N
-
-#         S_grid = np.linspace(0, S_max, M+1)
-#         V = np.zeros((N+1, M+1))
-
-#         # Terminal payoff: call for S>barrier, else 0
-#         payoff = np.maximum(K - S_grid, 0.0)
-#         payoff[S_grid >= barrier] = 0.0
-#         V[-1,:] = payoff
-        
-                
-#         # Boundaries
-#         t_arr = np.linspace(0, T, N+1)
-#         for i in range(N+1):
-#             tau = T - t_arr[i]
-#             V[i, 0]   = 0.0
-#             V[i, -1]  = 0.0
-
-#         # PDE Coeffs
-#         j_arr = np.arange(M+1)
-#         a = 0.5*dt*(sigma**2 * j_arr**2 - r*j_arr)
-#         b = 1.0 - dt*(sigma**2*j_arr**2 + r)
-#         c = 0.5*dt*(sigma**2 * j_arr**2 + r*j_arr)
-
-#         # Forward Euler stepping
-#         for n in range(N, 0, -1):
-#             for j in range(1, M):
-#                 V[n-1, j] = a[j]*V[n, j-1] + b[j]*V[n, j] + c[j]*V[n, j+1]
-#             # zero out for S <= barrier
-#             for j in range(M+1):
-#                 if S_grid[j] >= barrier:
-#                     V[n-1, j] = 0.0
-
-#         # Interpolate to get price at S0
-#         interp_fn = interp1d(S_grid, V[0,:], kind='linear', fill_value='extrapolate')
-#         priceUop = float(interp_fn(S0))        
-#         return priceUop, S_grid, V[0,:]
-    
-#     elif option_type == "up-and-in put":
-#         S_max = 2 * max(S0, K) * np.exp(r*T)
-#         M = int(S_max / dS)
-#         N = int(T / dt)
-#         dS = S_max / M
-#         dt = T / N
-
-#         S_grid = np.linspace(0, S_max, M+1)
-#         V = np.zeros((N+1, M+1))
-
-#         # Terminal payoff: call for S>barrier, else 0
-#         payoff = np.maximum(K - S_grid, 0.0)
-#         payoff[S_grid >= barrier] = 0.0
-#         V[-1,:] = payoff
-        
-                
-#         # Boundaries
-#         t_arr = np.linspace(0, T, N+1)
-#         for i in range(N+1):
-#             tau = T - t_arr[i]
-#             V[i, 0]   = 0.0
-#             V[i, -1]  = 0.0
-
-#         # PDE Coeffs
-#         j_arr = np.arange(M+1)
-#         a = 0.5*dt*(sigma**2 * j_arr**2 - r*j_arr)
-#         b = 1.0 - dt*(sigma**2*j_arr**2 + r)
-#         c = 0.5*dt*(sigma**2 * j_arr**2 + r*j_arr)
-
-#         # Forward Euler stepping
-#         for n in range(N, 0, -1):
-#             for j in range(1, M):
-#                 V[n-1, j] = a[j]*V[n, j-1] + b[j]*V[n, j] + c[j]*V[n, j+1]
-#             # zero out for S <= barrier
-#             for j in range(M+1):
-#                 if S_grid[j] >= barrier:
-#                     V[n-1, j] = 0.0
-                    
-#         # Interpolate to get price at S0
-#         interp_fn = interp1d(S_grid, V[0,:], kind='linear', fill_value='extrapolate')
-#         priceUop = float(interp_fn(S0))   
-        
-#         priceVan, S_gridV, PDE_van = forward_euler_vanilla_put(S0, K, T, r, sigma, dS, dt)
-        
-#         PDE_uinp = PDE_van - V[0,:]
-#         priceUip = priceVan - priceUop
-        
-#         return priceUip, S_gridV, PDE_uinp      
-                            
-        
-#     return None
 
 
 ###############################################################################
@@ -2788,531 +2331,75 @@ def backward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type):
     # If the option_type is not recognized, return None
     return None
 
-###############################################################################
-# A) Vanilla Call / Put with Crank–Nicolson
-###############################################################################
-# def crank_nicolson_vanilla_call(S0, K, T, r, sigma, dS, dt):
-#     """
-#     Crank–Nicolson PDE for a vanilla European call on [0, S_max].
-#     Returns: (priceCN, S_grid, V_at_t0).
-#     """
-#     # 1) Grid setup
-#     S_max = 2 * max(S0, K) * np.exp(r * T)
-#     M = int(S_max / dS)
-#     N = int(T / dt)
-#     dS = S_max / M
-#     dt = T / N
-
-#     S_grid = np.linspace(0, S_max, M + 1)
-#     V = np.zeros((N + 1, M + 1))
-
-#     # 2) Terminal payoff
-#     V[-1, :] = np.maximum(S_grid - K, 0.0)
-
-#     # 3) Build the CN coefficients for interior nodes j=1,...,M-1
-#     #    We'll define the usual "a, b, c" from the forward-Euler approach,
-#     #    then split them in half for the Crank–Nicolson system.
-#     j_arr = np.arange(M + 1)
-
-#     # From the standard 1D discretization of dV/dt = ...
-#     # (matching your forward-Euler 'a, b, c' definitions)
-#     a = 0.5 * dt * (sigma**2 * j_arr**2 - r * j_arr)         # multiplies V_{j-1}
-#     b = dt * (sigma**2 * j_arr**2 + r)                       # multiplies V_{j}
-#     c = 0.5 * dt * (sigma**2 * j_arr**2 + r * j_arr)         # multiplies V_{j+1}
-
-#     # For Crank–Nicolson:
-#     #   LHS:  (1 + b[j]/2) on diag,   - a[j]/2 on subdiag,   - c[j]/2 on superdiag
-#     #   RHS:  (1 - b[j]/2) on diag,    a[j]/2 on subdiag,     c[j]/2 on superdiag
-#     # We'll build these (M-1)x(M-1) matrices for the interior j=1..M-1
-#     main_diag_L = np.empty(M - 1)
-#     main_diag_R = np.empty(M - 1)
-#     sub_diag_L   = np.empty(M - 2)
-#     sub_diag_R   = np.empty(M - 2)
-#     super_diag_L = np.empty(M - 2)
-#     super_diag_R = np.empty(M - 2)
-
-#     for j in range(1, M):
-#         main_diag_L[j - 1] = 1 + b[j] / 2
-#         main_diag_R[j - 1] = 1 - b[j] / 2
-
-#     for j in range(1, M - 1):
-#         sub_diag_L[j - 1] = -0.5 * a[j + 1]
-#         sub_diag_R[j - 1] =  0.5 * a[j + 1]
-#         super_diag_L[j - 1] = -0.5 * c[j]
-#         super_diag_R[j - 1] =  0.5 * c[j]
-
-#     # We'll construct the LHS and RHS matrices (both tridiagonal)
-#     # Then each time step we solve: LHS * V^{n-1}_int = RHS * V^n_int
-#     # 'int' means the interior nodes [1..M-1].
-#     import scipy.sparse as sp
-#     import scipy.sparse.linalg as spla
-
-#     # Helper function to build a tridiagonal sparse matrix
-#     def build_tridiag(main, sub, super_):
-#         return sp.diags(
-#             diagonals=[sub, main, super_],
-#             offsets=[-1, 0, 1],
-#             shape=(len(main), len(main)),
-#             format='csr'
-#         )
-
-#     LHS_mat = build_tridiag(main_diag_L, sub_diag_L, super_diag_L)
-#     RHS_mat = build_tridiag(main_diag_R, sub_diag_R, super_diag_R)
-
-#     # 4) Time stepping from n=N down to n=1
-#     t_arr = np.linspace(0, T, N + 1)
-#     for n in range(N, 0, -1):
-#         tau = T - t_arr[n - 1]
-
-#         # Boundary conditions at the new time level (n-1):
-#         # For a call:
-#         V[n - 1, 0]   = 0.0
-#         V[n - 1, -1]  = S_max - K * np.exp(-r * tau)
-
-#         # Build the RHS vector = RHS_mat * V[n, 1..M-1], plus boundary adjustments
-#         rhs_vec = RHS_mat.dot(V[n, 1:M])
-
-#         # Now incorporate known boundaries into rhs_vec:
-#         # sub_diag_R[0] multiplies V[n,0], super_diag_R[-1] multiplies V[n,M]
-#         # but for CN we need half-coeffs, etc.
-#         # Carefully handle the first and last interior points:
-#         j_first = 1
-#         j_last  = M - 1
-
-#         # If there's more than one interior node:
-#         if (M - 1) >= 1:
-#             # sub diag => index 0 in sub_diag_R corresponds to j=2 in full
-#             # but for j=1 we incorporate a boundary for sub
-#             rhs_vec[0] -= sub_diag_R[0] * V[n - 1, 0]  # boundary at j=0
-#             rhs_vec[-1] -= super_diag_R[-1] * V[n - 1, M]  # boundary at j=M
-
-#         # Solve LHS_mat * V[n-1,1..M-1] = rhs_vec
-#         V[n - 1, 1:M] = spla.spsolve(LHS_mat, rhs_vec)
-
-#     # 5) Interpolate to get the option price at S0
-#     interp_fn = interp1d(S_grid, V[0, :], kind='linear', fill_value='extrapolate')
-#     priceCN = float(interp_fn(S0))
-#     return priceCN, S_grid, V[0, :]
-
-
-# def crank_nicolson_vanilla_put(S0, K, T, r, sigma, dS, dt):
-#     """
-#     Crank–Nicolson PDE for a vanilla European put on [0, S_max].
-#     Returns: (priceCN, S_grid, V_at_t0).
-#     """
-#     S_max = 2 * max(S0, K) * np.exp(r * T)
-#     M = int(S_max / dS)
-#     N = int(T / dt)
-#     dS = S_max / M
-#     dt = T / N
-
-#     S_grid = np.linspace(0, S_max, M + 1)
-#     V = np.zeros((N + 1, M + 1))
-
-#     # Terminal payoff
-#     V[-1, :] = np.maximum(K - S_grid, 0.0)
-
-#     # Build CN coefficients (same pattern as the call)
-#     j_arr = np.arange(M + 1)
-#     a = 0.5 * dt * (sigma**2 * j_arr**2 - r * j_arr)
-#     b = dt * (sigma**2 * j_arr**2 + r)
-#     c = 0.5 * dt * (sigma**2 * j_arr**2 + r * j_arr)
-
-#     main_diag_L = np.empty(M - 1)
-#     main_diag_R = np.empty(M - 1)
-#     sub_diag_L   = np.empty(M - 2)
-#     sub_diag_R   = np.empty(M - 2)
-#     super_diag_L = np.empty(M - 2)
-#     super_diag_R = np.empty(M - 2)
-
-#     for j in range(1, M):
-#         main_diag_L[j - 1] = 1 + b[j] / 2
-#         main_diag_R[j - 1] = 1 - b[j] / 2
-
-#     for j in range(1, M - 1):
-#         sub_diag_L[j - 1]   = -0.5 * a[j + 1]
-#         sub_diag_R[j - 1]   =  0.5 * a[j + 1]
-#         super_diag_L[j - 1] = -0.5 * c[j]
-#         super_diag_R[j - 1] =  0.5 * c[j]
-
-#     import scipy.sparse as sp
-#     import scipy.sparse.linalg as spla
-
-#     def build_tridiag(main, sub, super_):
-#         return sp.diags(
-#             diagonals=[sub, main, super_],
-#             offsets=[-1, 0, 1],
-#             shape=(len(main), len(main)),
-#             format='csr'
-#         )
-
-#     LHS_mat = build_tridiag(main_diag_L, sub_diag_L, super_diag_L)
-#     RHS_mat = build_tridiag(main_diag_R, sub_diag_R, super_diag_R)
-
-#     # Time stepping
-#     t_arr = np.linspace(0, T, N + 1)
-#     for n in range(N, 0, -1):
-#         tau = T - t_arr[n - 1]
-#         # Put boundary conditions
-#         V[n - 1, 0]   = K * np.exp(-r * tau)  # deep in-the-money at S=0
-#         V[n - 1, -1]  = 0.0                  # worthless at large S
-
-#         rhs_vec = RHS_mat.dot(V[n, 1:M])
-
-#         # Adjust for boundaries
-#         if (M - 1) >= 1:
-#             rhs_vec[0]   -= sub_diag_R[0]   * V[n - 1, 0]
-#             rhs_vec[-1]  -= super_diag_R[-1]* V[n - 1, M]
-
-#         V[n - 1, 1:M] = spla.spsolve(LHS_mat, rhs_vec)
-
-#     interp_fn = interp1d(S_grid, V[0, :], kind='linear', fill_value='extrapolate')
-#     priceCN = float(interp_fn(S0))
-#     return priceCN, S_grid, V[0, :]
-
-# ###############################################################################
-# # B) Knock-Out (Call / Put) with Crank–Nicolson
-# ###############################################################################
-# def crank_nicolson_knock_out_call(S0, K, T, r, sigma, dS, dt, barrier, barrier_type):
-#     """
-#     Crank–Nicolson PDE for a knock-out call:
-#       barrier_type = 'down' => zero out for S <= barrier
-#       barrier_type = 'up'   => zero out for S >= barrier
-#     """
-#     S_max = 2 * max(S0, K) * np.exp(r * T)
-#     M = int(S_max / dS)
-#     N = int(T / dt)
-#     dS = S_max / M
-#     dt = T / N
-
-#     S_grid = np.linspace(0, S_max, M + 1)
-#     V = np.zeros((N + 1, M + 1))
-
-#     # 1) Terminal payoff for a call
-#     payoff = np.maximum(S_grid - K, 0.0)
-#     if barrier_type == 'down':
-#         payoff[S_grid <= barrier] = 0.0
-#     else:
-#         payoff[S_grid >= barrier] = 0.0
-#     V[-1, :] = payoff
-
-#     # 2) Build the CN matrices (same as vanilla call)
-#     j_arr = np.arange(M + 1)
-#     a = 0.5 * dt * (sigma**2 * j_arr**2 - r * j_arr)
-#     b = dt * (sigma**2 * j_arr**2 + r)
-#     c = 0.5 * dt * (sigma**2 * j_arr**2 + r * j_arr)
-
-#     # Construct LHS and RHS
-#     main_diag_L = np.empty(M - 1)
-#     main_diag_R = np.empty(M - 1)
-#     sub_diag_L   = np.empty(M - 2)
-#     sub_diag_R   = np.empty(M - 2)
-#     super_diag_L = np.empty(M - 2)
-#     super_diag_R = np.empty(M - 2)
-
-#     for j in range(1, M):
-#         main_diag_L[j - 1] = 1 + b[j] / 2
-#         main_diag_R[j - 1] = 1 - b[j] / 2
-
-#     for j in range(1, M - 1):
-#         sub_diag_L[j - 1]   = -0.5 * a[j + 1]
-#         sub_diag_R[j - 1]   =  0.5 * a[j + 1]
-#         super_diag_L[j - 1] = -0.5 * c[j]
-#         super_diag_R[j - 1] =  0.5 * c[j]
-
-#     import scipy.sparse as sp
-#     import scipy.sparse.linalg as spla
-
-#     def build_tridiag(main, sub, super_):
-#         return sp.diags(
-#             diagonals=[sub, main, super_],
-#             offsets=[-1, 0, 1],
-#             shape=(len(main), len(main)),
-#             format='csr'
-#         )
-
-#     LHS_mat = build_tridiag(main_diag_L, sub_diag_L, super_diag_L)
-#     RHS_mat = build_tridiag(main_diag_R, sub_diag_R, super_diag_R)
-
-#     # 3) Time stepping
-#     t_arr = np.linspace(0, T, N + 1)
-#     for n in range(N, 0, -1):
-#         tau = T - t_arr[n - 1]
-#         # Call boundary conditions
-#         V[n - 1, 0]   = 0.0
-#         V[n - 1, -1]  = S_max - K * np.exp(-r * tau)
-
-#         # Build RHS
-#         rhs_vec = RHS_mat.dot(V[n, 1:M])
-#         if (M - 1) >= 1:
-#             rhs_vec[0]   -= sub_diag_R[0]   * V[n - 1, 0]
-#             rhs_vec[-1]  -= super_diag_R[-1]* V[n - 1, M]
-
-#         # Solve
-#         V[n - 1, 1:M] = spla.spsolve(LHS_mat, rhs_vec)
-
-#         # Knock out region
-#         if barrier_type == 'down':
-#             V[n - 1, S_grid <= barrier] = 0.0
-#         else:
-#             V[n - 1, S_grid >= barrier] = 0.0
-
-#     # 4) Interpolate to get price at S0
-#     interp_fn = interp1d(S_grid, V[0, :], kind='linear', fill_value='extrapolate')
-#     price_ko = float(interp_fn(S0))
-#     return price_ko, S_grid, V[0, :]
-
-
-# def crank_nicolson_knock_out_put(S0, K, T, r, sigma, dS, dt, barrier, barrier_type):
-#     """
-#     Crank–Nicolson PDE for a knock-out put:
-#       barrier_type = 'down' => zero out for S <= barrier
-#       barrier_type = 'up'   => zero out for S >= barrier
-#     """
-#     S_max = 2 * max(S0, K) * np.exp(r * T)
-#     M = int(S_max / dS)
-#     N = int(T / dt)
-#     dS = S_max / M
-#     dt = T / N
-
-#     S_grid = np.linspace(0, S_max, M + 1)
-#     V = np.zeros((N + 1, M + 1))
-
-#     # Terminal payoff for a put
-#     payoff = np.maximum(K - S_grid, 0.0)
-#     if barrier_type == 'down':
-#         payoff[S_grid <= barrier] = 0.0
-#     else:
-#         payoff[S_grid >= barrier] = 0.0
-#     V[-1, :] = payoff
-
-#     # Build CN matrices (similar to vanilla put)
-#     j_arr = np.arange(M + 1)
-#     a = 0.5 * dt * (sigma**2 * j_arr**2 - r * j_arr)
-#     b = dt * (sigma**2 * j_arr**2 + r)
-#     c = 0.5 * dt * (sigma**2 * j_arr**2 + r * j_arr)
-
-#     main_diag_L = np.empty(M - 1)
-#     main_diag_R = np.empty(M - 1)
-#     sub_diag_L   = np.empty(M - 2)
-#     sub_diag_R   = np.empty(M - 2)
-#     super_diag_L = np.empty(M - 2)
-#     super_diag_R = np.empty(M - 2)
-
-#     for j in range(1, M):
-#         main_diag_L[j - 1] = 1 + b[j] / 2
-#         main_diag_R[j - 1] = 1 - b[j] / 2
-
-#     for j in range(1, M - 1):
-#         sub_diag_L[j - 1]   = -0.5 * a[j + 1]
-#         sub_diag_R[j - 1]   =  0.5 * a[j + 1]
-#         super_diag_L[j - 1] = -0.5 * c[j]
-#         super_diag_R[j - 1] =  0.5 * c[j]
-
-#     import scipy.sparse as sp
-#     import scipy.sparse.linalg as spla
-
-#     def build_tridiag(main, sub, super_):
-#         return sp.diags(
-#             diagonals=[sub, main, super_],
-#             offsets=[-1, 0, 1],
-#             shape=(len(main), len(main)),
-#             format='csr'
-#         )
-
-#     LHS_mat = build_tridiag(main_diag_L, sub_diag_L, super_diag_L)
-#     RHS_mat = build_tridiag(main_diag_R, sub_diag_R, super_diag_R)
-
-#     # Time stepping
-#     t_arr = np.linspace(0, T, N + 1)
-#     for n in range(N, 0, -1):
-#         tau = T - t_arr[n - 1]
-#         # Put boundary conditions
-#         V[n - 1, 0]   = K * np.exp(-r * tau)
-#         V[n - 1, -1]  = 0.0
-
-#         rhs_vec = RHS_mat.dot(V[n, 1:M])
-#         if (M - 1) >= 1:
-#             rhs_vec[0]   -= sub_diag_R[0]   * V[n - 1, 0]
-#             rhs_vec[-1]  -= super_diag_R[-1]* V[n - 1, M]
-
-#         V[n - 1, 1:M] = spla.spsolve(LHS_mat, rhs_vec)
-
-#         # Knock out region
-#         if barrier_type == 'down':
-#             V[n - 1, S_grid <= barrier] = 0.0
-#         else:
-#             V[n - 1, S_grid >= barrier] = 0.0
-
-#     interp_fn = interp1d(S_grid, V[0, :], kind='linear', fill_value='extrapolate')
-#     price_ko = float(interp_fn(S0))
-#     return price_ko, S_grid, V[0, :]
-
-
-# ###############################################################################
-# # C) Main Crank–Nicolson Barrier Wrapper
-# ###############################################################################
-# def crank_nicolson(S0, K, T, r, sigma, dS, dt, barrier, option_type):
-#     """
-#     Main wrapper for Crank–Nicolson pricing of barrier options.
-#     We implement PDE directly for 'knock-out' and use in-out parity:
-#         knock_in = vanilla - knock_out
-#     to get the knock-in price.
-    
-#     Supported option_type:
-#       "down-and-out call",  "down-and-in call",
-#       "down-and-out put",   "down-and-in put",
-#       "up-and-out call",    "up-and-in call",
-#       "up-and-out put",     "up-and-in put".
-#     """
-#     # ---------------------------
-#     # A) DOWN-AND-OUT CALL
-#     # ---------------------------
-#     if option_type == "down-and-out call":
-#         return crank_nicolson_knock_out_call(S0, K, T, r, sigma, dS, dt, barrier, barrier_type='down')
-
-#     # B) DOWN-AND-IN CALL = vanilla call - down-and-out call
-#     elif option_type == "down-and-in call":
-#         priceDOC, Sg_DO, PDE_DO = crank_nicolson_knock_out_call(
-#             S0, K, T, r, sigma, dS, dt, barrier, barrier_type='down'
-#         )
-#         priceVan, Sg_van, PDE_van = crank_nicolson_vanilla_call(S0, K, T, r, sigma, dS, dt)
-#         priceDin = priceVan - priceDOC
-#         PDE_din  = PDE_van - PDE_DO
-#         return priceDin, Sg_van, PDE_din
-
-#     # C) DOWN-AND-OUT PUT
-#     elif option_type == "down-and-out put":
-#         return crank_nicolson_knock_out_put(S0, K, T, r, sigma, dS, dt, barrier, barrier_type='down')
-
-#     # D) DOWN-AND-IN PUT = vanilla put - down-and-out put
-#     elif option_type == "down-and-in put":
-#         priceDOP, Sg_DO, PDE_DO = crank_nicolson_knock_out_put(
-#             S0, K, T, r, sigma, dS, dt, barrier, barrier_type='down'
-#         )
-#         priceVan, Sg_van, PDE_van = crank_nicolson_vanilla_put(S0, K, T, r, sigma, dS, dt)
-#         priceDip = priceVan - priceDOP
-#         PDE_dip  = PDE_van - PDE_DO
-#         return priceDip, Sg_van, PDE_dip
-
-#     # E) UP-AND-OUT CALL
-#     elif option_type == "up-and-out call":
-#         return crank_nicolson_knock_out_call(S0, K, T, r, sigma, dS, dt, barrier, barrier_type='up')
-
-#     # F) UP-AND-IN CALL = vanilla call - up-and-out call
-#     elif option_type == "up-and-in call":
-#         priceUOC, Sg_UO, PDE_UO = crank_nicolson_knock_out_call(
-#             S0, K, T, r, sigma, dS, dt, barrier, barrier_type='up'
-#         )
-#         priceVan, Sg_van, PDE_van = crank_nicolson_vanilla_call(S0, K, T, r, sigma, dS, dt)
-#         priceUic = priceVan - priceUOC
-#         PDE_uic  = PDE_van - PDE_UO
-#         return priceUic, Sg_van, PDE_uic
-
-#     # G) UP-AND-OUT PUT
-#     elif option_type == "up-and-out put":
-#         return crank_nicolson_knock_out_put(S0, K, T, r, sigma, dS, dt, barrier, barrier_type='up')
-
-#     # H) UP-AND-IN PUT = vanilla put - up-and-out put
-#     elif option_type == "up-and-in put":
-#         priceUOP, Sg_UO, PDE_UO = crank_nicolson_knock_out_put(
-#             S0, K, T, r, sigma, dS, dt, barrier, barrier_type='up'
-#         )
-#         priceVan, Sg_van, PDE_van = crank_nicolson_vanilla_put(S0, K, T, r, sigma, dS, dt)
-#         priceUip = priceVan - priceUOP
-#         PDE_uip  = PDE_van - PDE_UO
-#         return priceUip, Sg_van, PDE_uip
-
-#     # If not recognized, return None
-#     return None
-
-###############################################################################
-# A) Vanilla Call / Put with Crank–Nicolson
-###############################################################################
-import scipy.sparse as sp
-import scipy.sparse.linalg as spla
 def crank_nicolson_vanilla_call(S0, K, T, r, sigma, dS, dt):
     """
     Crank–Nicolson PDE for a vanilla European call on [0, S_max].
-    Returns: (priceCN, S_grid, V_at_t0)
+    Returns: (price, S_grid, V_at_t0).
     """
-    # 1) Grid setup
+    eps = 1e-12  # define the error threshold
     S_max = 2 * max(S0, K) * np.exp(r * T)
     M = int(S_max / dS)
     N = int(T / dt)
-    dS = S_max / M
-    dt = T / N
+    dS = S_max / M  # adjust
+    dt = T / N      # adjust
 
     S_grid = np.linspace(0, S_max, M + 1)
     V = np.zeros((N + 1, M + 1))
-
-    # 2) Terminal payoff: call = max(S-K,0)
+    # Terminal payoff:
     V[-1, :] = np.maximum(S_grid - K, 0.0)
-
-    # 3) Build the CN coefficients for interior nodes j=1,...,M-1
-    j_arr = np.arange(M + 1)
-    a = 0.5 * dt * (sigma**2 * j_arr**2 - r * j_arr)  # multiplies V[j-1]
-    b = dt * (sigma**2 * j_arr**2 + r)                # multiplies V[j]
-    c = 0.5 * dt * (sigma**2 * j_arr**2 + r * j_arr)    # multiplies V[j+1]
-
-    # For Crank–Nicolson:
-    # LHS:  diag: (1 + b[j]/2), subdiag: -a[j]/2, superdiag: -c[j]/2
-    # RHS:  diag: (1 - b[j]/2), subdiag:  a[j]/2, superdiag:  c[j]/2
-    main_diag_L = np.empty(M - 1)
-    main_diag_R = np.empty(M - 1)
-    sub_diag_L   = np.empty(M - 2)
-    sub_diag_R   = np.empty(M - 2)
-    super_diag_L = np.empty(M - 2)
-    super_diag_R = np.empty(M - 2)
-
-    for j in range(1, M):
-        main_diag_L[j - 1] = 1 + b[j] / 2
-        main_diag_R[j - 1] = 1 - b[j] / 2
-
-    for j in range(1, M - 1):
-        sub_diag_L[j - 1] = -0.5 * a[j + 1]
-        sub_diag_R[j - 1] =  0.5 * a[j + 1]
-        super_diag_L[j - 1] = -0.5 * c[j]
-        super_diag_R[j - 1] =  0.5 * c[j]
-
-    # Build tridiagonal matrices for interior nodes (i=1,..,M-1)
-    def build_tridiag(main, sub, sup):
-        return sp.diags([sub, main, sup], offsets=[-1, 0, 1], format='csr')
     
-    LHS_mat = build_tridiag(main_diag_L, sub_diag_L, super_diag_L)
-    RHS_mat = build_tridiag(main_diag_R, sub_diag_R, super_diag_R)
-
-    # 4) Time stepping from n = N down to n = 1.
+    # Precompute Crank–Nicolson coefficients for j = 0,...,M.
+    # Here we define:
+    #   a[j] = 0.25 * dt * (sigma**2 * j**2 - r * j)
+    #   b[j] = 0.5  * dt * (sigma**2 * j**2 + r)
+    #   c[j] = 0.25 * dt * (sigma**2 * j**2 + r * j)
+    j_arr = np.arange(M + 1)
+    a = 0.25 * dt * (sigma**2 * j_arr**2 - r * j_arr)
+    b = 0.5  * dt * (sigma**2 * j_arr**2 + r)
+    c = 0.25 * dt * (sigma**2 * j_arr**2 + r * j_arr)
+    
+    # Build the tridiagonal matrix for interior nodes j = 1,...,M-1.
+    main_diag = 1 + b[1:M]
+    lower_diag = -a[2:M]      # corresponds to V_{j-1}^{n-1} for j = 2,...,M-1
+    upper_diag = -c[1:M-1]    # corresponds to V_{j+1}^{n-1} for j = 1,...,M-2
+    LHS = np.diag(main_diag)
+    if M - 2 > 0:
+        LHS += np.diag(lower_diag, k=-1) + np.diag(upper_diag, k=1)
+    
+    # Time-stepping (backward in time)
     t_arr = np.linspace(0, T, N + 1)
     for n in range(N, 0, -1):
         tau = T - t_arr[n - 1]
-        # Set boundary conditions for call:
-        V[n - 1, 0] = 0.0
-        V[n - 1, -1] = S_max - K * np.exp(-r * tau)
+        # Boundary conditions for a call:
+        V[n - 1, 0]   = 0.0
+        V[n - 1, -1]  = S_max - K * np.exp(-r * tau)
         
-        # Build RHS vector from interior nodes at time level n.
-        rhs_vec = RHS_mat.dot(V[n, 1:M])
-        # Incorporate boundary adjustments using an aux (auxiliary) variable:
-        aux = np.zeros(M - 1)
-        # For the first interior node, add contribution from S=0:
-        aux[0] = sub_diag_R[0] * V[n - 1, 0]  # note: sub_diag_R = 0.5*a[j+1]
-        # For the last interior node, add contribution from S=S_max:
-        aux[-1] = super_diag_R[-1] * V[n - 1, M]
-        rhs_vec -= aux
+        # Build right-hand side for interior nodes j = 1,...,M-1.
+        # Using the explicit part:
+        #   rhs[j-1] = a[j]*V[n, j-1] + (1 - b[j])*V[n, j] + c[j]*V[n, j+1]
+        rhs = a[1:M] * V[n, 0:M-1] + (1 - b[1:M]) * V[n, 1:M] + c[1:M] * V[n, 2:M+1]
+        # Adjust for known boundary values:
+        # For j = 1 (leftmost interior): add a[1]*V[n-1,0] (V[n-1,0] is already set)
+        rhs[0]   += a[1] * V[n - 1, 0]
+        # For j = M-1: add c[M-1]*V[n-1,-1]
+        rhs[-1]  += c[M - 1] * V[n - 1, -1]
         
-        # Solve for interior nodes at time level n-1.
-        V[n - 1, 1:M] = spla.spsolve(LHS_mat, rhs_vec)
-    # 5) Interpolate to get the option price at S0.
+        # Solve for interior nodes:
+        V[n - 1, 1:M] = np.linalg.solve(LHS, rhs)
+        V[n - 1, :] = np.where(np.abs(V[n - 1, :]) < eps, 0.0, V[n - 1, :])
+    
+    # Interpolate to get the price at S0:
     interp_fn = interp1d(S_grid, V[0, :], kind='linear', fill_value='extrapolate')
-    priceCN = float(interp_fn(S0))
-    return priceCN, S_grid, V[0, :]
+    price = float(interp_fn(S0))
+    return price, S_grid, V[0, :]
 
 
 def crank_nicolson_vanilla_put(S0, K, T, r, sigma, dS, dt):
     """
     Crank–Nicolson PDE for a vanilla European put on [0, S_max].
-    Returns: (priceCN, S_grid, V_at_t0).
+    Returns: (price, S_grid, V_at_t0).
     """
+    eps = 1e-12  # define the error threshold
     S_max = 2 * max(S0, K) * np.exp(r * T)
     M = int(S_max / dS)
     N = int(T / dt)
@@ -3321,76 +2408,53 @@ def crank_nicolson_vanilla_put(S0, K, T, r, sigma, dS, dt):
 
     S_grid = np.linspace(0, S_max, M + 1)
     V = np.zeros((N + 1, M + 1))
-    
-    # Terminal payoff: put = max(K - S, 0)
+    # Terminal payoff:
     V[-1, :] = np.maximum(K - S_grid, 0.0)
     
-    # Set boundary conditions for a put:
-    for j in range(N+1):
-        tau = T - j * dt
-        V[j, 0] = K * np.exp(-r * tau)  # at S = 0
-        V[j, -1] = 0.0                  # at S = S_max
-
     j_arr = np.arange(M + 1)
-    a = 0.5 * dt * (sigma**2 * j_arr**2 - r * j_arr)
-    b = dt * (sigma**2 * j_arr**2 + r)
-    c = 0.5 * dt * (sigma**2 * j_arr**2 + r * j_arr)
+    a = 0.25 * dt * (sigma**2 * j_arr**2 - r * j_arr)
+    b = 0.5  * dt * (sigma**2 * j_arr**2 + r)
+    c = 0.25 * dt * (sigma**2 * j_arr**2 + r * j_arr)
     
-    main_diag_L = np.empty(M - 1)
-    main_diag_R = np.empty(M - 1)
-    sub_diag_L   = np.empty(M - 2)
-    sub_diag_R   = np.empty(M - 2)
-    super_diag_L = np.empty(M - 2)
-    super_diag_R = np.empty(M - 2)
-    
-    for j in range(1, M):
-        main_diag_L[j - 1] = 1 + b[j] / 2
-        main_diag_R[j - 1] = 1 - b[j] / 2
-    for j in range(1, M - 1):
-        sub_diag_L[j - 1] = -0.5 * a[j + 1]
-        sub_diag_R[j - 1] =  0.5 * a[j + 1]
-        super_diag_L[j - 1] = -0.5 * c[j]
-        super_diag_R[j - 1] =  0.5 * c[j]
-        
-    def build_tridiag(main, sub, sup):
-        return sp.diags([sub, main, sup], offsets=[-1, 0, 1], format='csr')
-    
-    LHS_mat = build_tridiag(main_diag_L, sub_diag_L, super_diag_L)
-    RHS_mat = build_tridiag(main_diag_R, sub_diag_R, super_diag_R)
+    main_diag = 1 + b[1:M]
+    lower_diag = -a[2:M]
+    upper_diag = -c[1:M-1]
+    LHS = np.diag(main_diag)
+    if M - 2 > 0:
+        LHS += np.diag(lower_diag, k=-1) + np.diag(upper_diag, k=1)
     
     t_arr = np.linspace(0, T, N + 1)
     for n in range(N, 0, -1):
         tau = T - t_arr[n - 1]
-        V[n - 1, 0] = K * np.exp(-r * tau)
-        V[n - 1, -1] = 0.0
+        # Boundary conditions for a put:
+        V[n - 1, 0]   = K * np.exp(-r * tau)
+        V[n - 1, -1]  = 0.0
         
-        rhs_vec = RHS_mat.dot(V[n, 1:M])
-        aux = np.zeros(M - 1)
-        aux[0] = sub_diag_R[0] * V[n - 1, 0]
-        aux[-1] = super_diag_R[-1] * V[n - 1, M]
-        rhs_vec -= aux
+        rhs = a[1:M] * V[n, 0:M-1] + (1 - b[1:M]) * V[n, 1:M] + c[1:M] * V[n, 2:M+1]
+        rhs[0]   += a[1] * V[n - 1, 0]
+        rhs[-1]  += c[M - 1] * V[n - 1, -1]
         
-        V[n - 1, 1:M] = spla.spsolve(LHS_mat, rhs_vec)
+        V[n - 1, 1:M] = np.linalg.solve(LHS, rhs)
+        V[n - 1, :] = np.where(np.abs(V[n - 1, :]) < eps, 0.0, V[n - 1, :])
     
     interp_fn = interp1d(S_grid, V[0, :], kind='linear', fill_value='extrapolate')
-    priceCN = float(interp_fn(S0))
-    return priceCN, S_grid, V[0, :]
+    price = float(interp_fn(S0))
+    return price, S_grid, V[0, :]
+
 
 ###############################################################################
-# B) Knock–Out Options with Crank–Nicolson (Call / Put)
+# 2) Barrier Option Pricing using Crank–Nicolson
 ###############################################################################
-def crank_nicolson_knock_out(S0, K, T, r, sigma, dS, dt, barrier, barrier_type, option_type):
+def crank_nicolson_knock_out_call(S0, K, T, r, sigma, dS, dt, barrier, barrier_type):
     """
-    Crank–Nicolson PDE for a knock–out option.
+    Crank–Nicolson for a knock–out call (either 'down-and-out' or 'up-and-out').
+    barrier_type: 'down' or 'up'
     
-    barrier_type: 'down' => zero out for S <= barrier,
-                  'up'   => zero out for S >= barrier.
-    option_type: "Call" or "Put".
-    
-    The terminal payoff is modified by zeroing values in the barrier region.
-    During the time stepping, after solving the system we enforce the barrier
-    by setting V = 0 for S in the knocked–out region.
+    The terminal payoff is set to zero in the barrier region:
+      - For 'down-and-out': zero for S <= barrier.
+      - For 'up-and-out':   zero for S >= barrier.
     """
+    eps = 1e-12  # define the error threshold
     S_max = 2 * max(S0, K) * np.exp(r * T)
     M = int(S_max / dS)
     N = int(T / dt)
@@ -3398,135 +2462,153 @@ def crank_nicolson_knock_out(S0, K, T, r, sigma, dS, dt, barrier, barrier_type, 
     dt = T / N
 
     S_grid = np.linspace(0, S_max, M + 1)
-    V = np.zeros((N + 1, M + 1))
-    
-    # 1) Terminal payoff, modified by barrier:
-    if option_type.lower() == "call":
-        payoff = np.maximum(S_grid - K, 0.0)
-    else:
-        payoff = np.maximum(K - S_grid, 0.0)
+    # Define terminal payoff and apply knockout condition:
+    payoff = np.maximum(S_grid - K, 0.0)
     if barrier_type == 'down':
         payoff[S_grid <= barrier] = 0.0
-    else:
+    else:  # 'up'
         payoff[S_grid >= barrier] = 0.0
+    V = np.zeros((N + 1, M + 1))
     V[-1, :] = payoff
 
-    # 2) Boundary conditions (same as vanilla)
-    for j in range(N+1):
-        tau = T - j*dt
-        if option_type.lower() == "call":
-            V[j, 0] = 0.0
-            V[j, -1] = S_max - K * np.exp(-r * tau)
-        else:
-            V[j, 0] = K * np.exp(-r * tau)
-            V[j, -1] = 0.0
-
-    # 3) Build CN coefficients (same as vanilla)
     j_arr = np.arange(M + 1)
-    a = 0.5 * dt * (sigma**2 * j_arr**2 - r * j_arr)
-    b = dt * (sigma**2 * j_arr**2 + r)
-    c = 0.5 * dt * (sigma**2 * j_arr**2 + r * j_arr)
+    a = 0.25 * dt * (sigma**2 * j_arr**2 - r * j_arr)
+    b = 0.5  * dt * (sigma**2 * j_arr**2 + r)
+    c = 0.25 * dt * (sigma**2 * j_arr**2 + r * j_arr)
     
-    main_diag_L = np.empty(M - 1)
-    main_diag_R = np.empty(M - 1)
-    sub_diag_L   = np.empty(M - 2)
-    sub_diag_R   = np.empty(M - 2)
-    super_diag_L = np.empty(M - 2)
-    super_diag_R = np.empty(M - 2)
+    main_diag = 1 + b[1:M]
+    lower_diag = -a[2:M]
+    upper_diag = -c[1:M-1]
+    LHS = np.diag(main_diag)
+    if M - 2 > 0:
+        LHS += np.diag(lower_diag, k=-1) + np.diag(upper_diag, k=1)
     
-    for j in range(1, M):
-        main_diag_L[j - 1] = 1 + b[j] / 2
-        main_diag_R[j - 1] = 1 - b[j] / 2
-    for j in range(1, M - 1):
-        sub_diag_L[j - 1] = -0.5 * a[j + 1]
-        sub_diag_R[j - 1] =  0.5 * a[j + 1]
-        super_diag_L[j - 1] = -0.5 * c[j]
-        super_diag_R[j - 1] =  0.5 * c[j]
-        
-    def build_tridiag(main, sub, sup):
-        return sp.diags([sub, main, sup], offsets=[-1, 0, 1], format='csr')
-    
-    LHS_mat = build_tridiag(main_diag_L, sub_diag_L, super_diag_L)
-    RHS_mat = build_tridiag(main_diag_R, sub_diag_R, super_diag_R)
-    
-    # 4) Time stepping (backward in time) with aux for boundary adjustments.
     t_arr = np.linspace(0, T, N + 1)
     for n in range(N, 0, -1):
         tau = T - t_arr[n - 1]
-        if option_type.lower() == "call":
-            V[n - 1, 0] = 0.0
-            V[n - 1, -1] = S_max - K * np.exp(-r * tau)
-        else:
-            V[n - 1, 0] = K * np.exp(-r * tau)
-            V[n - 1, -1] = 0.0
+        # Boundary conditions for a call:
+        V[n - 1, 0]   = 0.0
+        V[n - 1, -1]  = S_max - K * np.exp(-r * tau)
         
-        rhs_vec = RHS_mat.dot(V[n, 1:M])
-        aux = np.zeros(M - 1)
-        aux[0] = sub_diag_R[0] * V[n - 1, 0]
-        aux[-1] = super_diag_R[-1] * V[n - 1, M]
-        rhs_vec -= aux
+        rhs = a[1:M] * V[n, 0:M-1] + (1 - b[1:M]) * V[n, 1:M] + c[1:M] * V[n, 2:M+1]
+        rhs[0]   += a[1] * V[n - 1, 0]
+        rhs[-1]  += c[M - 1] * V[n - 1, -1]
         
-        V[n - 1, 1:M] = spla.spsolve(LHS_mat, rhs_vec)
-        
-        # 5) Enforce barrier condition at each time step:
+        V[n - 1, 1:M] = np.linalg.solve(LHS, rhs)
+        V[n - 1, :] = np.where(np.abs(V[n - 1, :]) < eps, 0.0, V[n - 1, :])
+        # Enforce barrier condition at this time level:
         if barrier_type == 'down':
             V[n - 1, S_grid <= barrier] = 0.0
-        else:
+        else:  # 'up'
             V[n - 1, S_grid >= barrier] = 0.0
-    # 6) Interpolate to get price at S0.
+    
     interp_fn = interp1d(S_grid, V[0, :], kind='linear', fill_value='extrapolate')
     price_ko = float(interp_fn(S0))
     return price_ko, S_grid, V[0, :]
 
+
+def crank_nicolson_knock_out_put(S0, K, T, r, sigma, dS, dt, barrier, barrier_type):
+    """
+    Crank–Nicolson for a knock–out put (either 'down-and-out' or 'up-and-out').
+    barrier_type: 'down' or 'up'
+    """
+    eps = 1e-12  # define the error threshold
+    S_max = 2 * max(S0, K) * np.exp(r * T)
+    M = int(S_max / dS)
+    N = int(T / dt)
+    dS = S_max / M
+    dt = T / N
+
+    S_grid = np.linspace(0, S_max, M + 1)
+    payoff = np.maximum(K - S_grid, 0.0)
+    if barrier_type == 'down':
+        payoff[S_grid <= barrier] = 0.0
+    else:
+        payoff[S_grid >= barrier] = 0.0
+    V = np.zeros((N + 1, M + 1))
+    V[-1, :] = payoff
+
+    j_arr = np.arange(M + 1)
+    a = 0.25 * dt * (sigma**2 * j_arr**2 - r * j_arr)
+    b = 0.5  * dt * (sigma**2 * j_arr**2 + r)
+    c = 0.25 * dt * (sigma**2 * j_arr**2 + r * j_arr)
+    
+    main_diag = 1 + b[1:M]
+    lower_diag = -a[2:M]
+    upper_diag = -c[1:M-1]
+    LHS = np.diag(main_diag)
+    if M - 2 > 0:
+        LHS += np.diag(lower_diag, k=-1) + np.diag(upper_diag, k=1)
+    
+    t_arr = np.linspace(0, T, N + 1)
+    for n in range(N, 0, -1):
+        tau = T - t_arr[n - 1]
+        # Boundary conditions for a put:
+        V[n - 1, 0]   = K * np.exp(-r * tau)
+        V[n - 1, -1]  = 0.0
+        
+        rhs = a[1:M] * V[n, 0:M-1] + (1 - b[1:M]) * V[n, 1:M] + c[1:M] * V[n, 2:M+1]
+        rhs[0]   += a[1] * V[n - 1, 0]
+        rhs[-1]  += c[M - 1] * V[n - 1, -1]
+        
+        V[n - 1, 1:M] = np.linalg.solve(LHS, rhs)
+        V[n - 1, :] = np.where(np.abs(V[n - 1, :]) < eps, 0.0, V[n - 1, :])
+        # Enforce barrier condition:
+        if barrier_type == 'down':
+            V[n - 1, S_grid <= barrier] = 0.0
+        else:
+            V[n - 1, S_grid >= barrier] = 0.0
+    
+    interp_fn = interp1d(S_grid, V[0, :], kind='linear', fill_value='extrapolate')
+    price_ko = float(interp_fn(S0))
+    return price_ko, S_grid, V[0, :]
+
+
 ###############################################################################
-# C) Main Crank–Nicolson Barrier Wrapper Using In–Out Parity
+# 3) Main Crank–Nicolson Barrier Wrapper
 ###############################################################################
-def crank_nicolson_barrier(S0, K, T, r, sigma, dS, dt, barrier, option_type):
+def crank_nicolson(S0, K, T, r, sigma, dS, dt, barrier, option_type):
     """
     Main wrapper for Crank–Nicolson pricing of barrier options.
-    
-    option_type should be one of:
-      "down-and-out call",  "down-and-in call",
-      "down-and-out put",   "down-and-in put",
-      "up-and-out call",    "up-and-in call",
-      "up-and-out put",     "up-and-in put".
-    
-    For knock–in options, we compute the vanilla price and subtract the knock–out price.
+    Knock–in options are obtained via in–out parity:
+         knock_in = vanilla - knock_out.
+    option_type must be one of:
+      "down-and-out call", "down-and-in call", "down-and-out put", "down-and-in put",
+      "up-and-out call",   "up-and-in call",   "up-and-out put",   "up-and-in put".
     """
-    # Determine if vanilla is Call or Put
-    if "call" in option_type.lower():
-        vanilla_func = crank_nicolson_vanilla_call
-    else:
-        vanilla_func = crank_nicolson_vanilla_put
-
-    # For knock–out options:
-    if "down-and-out" in option_type.lower():
-        barrier_type = 'down'
-        price_ko, S_grid, PDE_ko = crank_nicolson_knock_out(S0, K, T, r, sigma, dS, dt,
-                                                             barrier, barrier_type,
-                                                             option_type.split()[-1])
-        # For knock–in:
-        if "in" in option_type.lower():
-            price_van, S_grid, PDE_van = vanilla_func(S0, K, T, r, sigma, dS, dt)
-            price_ki = price_van - price_ko
-            PDE_ki = PDE_van - PDE_ko
-            return price_ki, S_grid, PDE_ki
-        else:
-            return price_ko, S_grid, PDE_ko
-    elif "up-and-out" in option_type.lower():
-        barrier_type = 'up'
-        price_ko, S_grid, PDE_ko = crank_nicolson_knock_out(S0, K, T, r, sigma, dS, dt,
-                                                             barrier, barrier_type,
-                                                             option_type.split()[-1])
-        if "in" in option_type.lower():
-            price_van, S_grid, PDE_van = vanilla_func(S0, K, T, r, sigma, dS, dt)
-            price_ki = price_van - price_ko
-            PDE_ki = PDE_van - PDE_ko
-            return price_ki, S_grid, PDE_ki
-        else:
-            return price_ko, S_grid, PDE_ko
-    else:
-        return None
+    if option_type == "down-and-out call":
+        return crank_nicolson_knock_out_call(S0, K, T, r, sigma, dS, dt, barrier, barrier_type='down')
+    elif option_type == "down-and-in call":
+        price_doc, Sg, V_doc = crank_nicolson_knock_out_call(S0, K, T, r, sigma, dS, dt, barrier, barrier_type='down')
+        price_van, Sg, V_van = crank_nicolson_vanilla_call(S0, K, T, r, sigma, dS, dt)
+        price_din = price_van - price_doc
+        V_din = V_van - V_doc
+        return price_din, Sg, V_din
+    elif option_type == "down-and-out put":
+        return crank_nicolson_knock_out_put(S0, K, T, r, sigma, dS, dt, barrier, barrier_type='down')
+    elif option_type == "down-and-in put":
+        price_dop, Sg, V_dop = crank_nicolson_knock_out_put(S0, K, T, r, sigma, dS, dt, barrier, barrier_type='down')
+        price_van, Sg, V_van = crank_nicolson_vanilla_put(S0, K, T, r, sigma, dS, dt)
+        price_din = price_van - price_dop
+        V_din = V_van - V_dop
+        return price_din, Sg, V_din
+    elif option_type == "up-and-out call":
+        return crank_nicolson_knock_out_call(S0, K, T, r, sigma, dS, dt, barrier, barrier_type='up')
+    elif option_type == "up-and-in call":
+        price_uoc, Sg, V_uoc = crank_nicolson_knock_out_call(S0, K, T, r, sigma, dS, dt, barrier, barrier_type='up')
+        price_van, Sg, V_van = crank_nicolson_vanilla_call(S0, K, T, r, sigma, dS, dt)
+        price_uic = price_van - price_uoc
+        V_uic = V_van - V_uoc
+        return price_uic, Sg, V_uic
+    elif option_type == "up-and-out put":
+        return crank_nicolson_knock_out_put(S0, K, T, r, sigma, dS, dt, barrier, barrier_type='up')
+    elif option_type == "up-and-in put":
+        price_uop, Sg, V_uop = crank_nicolson_knock_out_put(S0, K, T, r, sigma, dS, dt, barrier, barrier_type='up')
+        price_van, Sg, V_van = crank_nicolson_vanilla_put(S0, K, T, r, sigma, dS, dt)
+        price_uip = price_van - price_uop
+        V_uip = V_van - V_uop
+        return price_uip, Sg, V_uip
+    return None
 ################################################################################
 # 5) The Streamlit app
 ################################################################################
@@ -3645,7 +2727,7 @@ def app():
     elif numerical_method == "Crank-Nicolson":
     # 1) PDE solution for down-and-in
         #priceDin, S_grid, PDE_din = forward_euler_down_in_call(S0, K, T, r, sigma, dS, dt, barrier)
-        priceSol, S_grid, PDE_sol = crank_nicolson_barrier(S0, K, T, r, sigma, dS, dt, barrier, option_type)
+        priceSol, S_grid, PDE_sol = crank_nicolson(S0, K, T, r, sigma, dS, dt, barrier, option_type)
         
 
         st.write(f"**PDE price at S0** = {priceSol:.4f}")
