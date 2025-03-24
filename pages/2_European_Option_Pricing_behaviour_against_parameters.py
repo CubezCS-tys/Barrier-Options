@@ -283,3 +283,4 @@ with tabs[4]:
     )
     
     st.plotly_chart(fig_interest, use_container_width=True)
+
