@@ -1,3 +1,5 @@
+
+
 import numpy as np
 from scipy.stats import norm
 import streamlit as st
@@ -13,8 +15,7 @@ def black_scholes(S, K, T, r, sigma):
     
     return call_price, put_price
 
-st.set_page_config(page_title="Black-Scholes Option Pricing Using Heat maps")
-
+st.set_page_config(page_title="Black-Scholes Option Pricing Using Heat maps", layout = "wide")
 st.title("Heatmaps for Black-Scholes Option Pricing")
 
 # Input fields for the model parameters
@@ -44,14 +45,11 @@ ax_call.set_xlabel('Spot Price (S)')
 ax_call.set_ylabel('Volatility (σ)')
 fig_call.colorbar(c_call, ax=ax_call, label='Call Option Price')
 
-# Annotate the heatmap
+# Annotate the call heatmap
 for i in range(len(S_values)):
     for j in range(len(sigma_values)):
         ax_call.text(S_values[i], sigma_values[j], f'{call_price_grid[i, j]:.2f}',
                      ha='center', va='center', color='white', fontsize=8)
-
-# Display the heatmap in Streamlit
-st.pyplot(fig_call)
 
 # Create Heatmap for Put Option Price
 fig_put, ax_put = plt.subplots()
@@ -61,11 +59,15 @@ ax_put.set_xlabel('Spot Price (S)')
 ax_put.set_ylabel('Volatility (σ)')
 fig_put.colorbar(c_put, ax=ax_put, label='Put Option Price')
 
-# Annotate the heatmap
+# Annotate the put heatmap
 for i in range(len(S_values)):
     for j in range(len(sigma_values)):
         ax_put.text(S_values[i], sigma_values[j], f'{put_price_grid[i, j]:.2f}',
                     ha='center', va='center', color='white', fontsize=8)
 
-# Display the heatmap in Streamlit
-st.pyplot(fig_put)
+# Display the two heatmaps side by side using columns
+col1, col2 = st.columns(2)
+with col1:
+    st.pyplot(fig_call)
+with col2:
+    st.pyplot(fig_put)

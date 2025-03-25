@@ -1,318 +1,12 @@
-# import streamlit as st
-# import numpy as np
-# from scipy.stats import norm
 
-# # Define helper functions for option pricing
 
-# def calc_d1(S0, K, r, q, sigma, T):
-#     d1 = (np.log(S0 / K) + (r - q + (sigma ** 2) / 2) * T) / (sigma * np.sqrt(T))
-#     return d1
-
-# def calc_d2(S0, K, r, q, sigma, T):
-#     d2 = calc_d1(S0, K, r, q, sigma, T) - sigma * np.sqrt(T)
-#     return d2
-
-# def calc_c(S0, K, r, q, sigma, T):
-#     d1 = calc_d1(S0, K, r, q, sigma, T)
-#     d2 = calc_d2(S0, K, r, q, sigma, T)
-#     c = S0 * np.exp(-q * T) * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
-#     return c
-
-# def calc_p(S0, K, r, q, sigma, T):
-#     d1 = calc_d1(S0, K, r, q, sigma, T)
-#     d2 = calc_d2(S0, K, r, q, sigma, T)
-#     p = K * np.exp(-r * T) * norm.cdf(-d2) - S0 * np.exp(-q * T) * norm.cdf(-d1)
-#     return p
-
-# def calc_lambda(r, q, sigma):
-#     lambda_ = (r - q + (0.5 * (sigma ** 2))) / sigma ** 2
-#     return lambda_
-
-# def calc_y(H, S0, K, T, sigma, r, q):
-#     lambda_ = calc_lambda(r, q, sigma)
-#     y = (np.log((H ** 2) / (S0 * K)) / (sigma * np.sqrt(T))) + lambda_ * sigma * np.sqrt(T)
-#     return y
-
-# def calc_x1(S0, H, T, sigma):
-#     lambda_ = calc_lambda(r, q, sigma)
-#     x1 = ((np.log(S0/H))/(sigma * np.sqrt(T)))+(lambda_ * sigma * np.sqrt(T))
-#     return x1
-
-# def calc_y1(S0, H, T, sigma):
-#     lambda_ = calc_lambda(r, q, sigma)
-#     y1 = ((np.log(H/S0))/(sigma * np.sqrt(T)))+(lambda_ * sigma * np.sqrt(T))
-#     return y1
-
-# def barrier_option_price(S0, K, T, r, q, sigma, H, option_type):
-#     x1 = calc_x1(S0, H, T, sigma)
-#     y1 = calc_y1(S0, H, T, sigma)
-#     c = calc_c(S0, K, r, q, sigma, T)
-#     lambda_ = calc_lambda(r, q, sigma)
-#     y = calc_y(H, S0, K, T, sigma, r, q)
-#     p = calc_p(S0, K, r, q, sigma, T)
-
-#     if option_type == 'down-and-in call' and H <= K:
-#         cdi = (S0 * np.exp(-q * T) * (H / S0) ** (2 * lambda_) * norm.cdf(y) -
-#                K * np.exp(-r * T) * (H / S0) ** (2 * lambda_ - 2) * norm.cdf(y - sigma * np.sqrt(T)))
-#         return cdi
-#     elif option_type == 'down-and-out call' and H <= K:
-#         cdi = (S0 * np.exp(-q * T) * (H / S0) ** (2 * lambda_) * norm.cdf(y) -
-#                K * np.exp(-r * T) * (H / S0) ** (2 * lambda_ - 2) * norm.cdf(y - sigma * np.sqrt(T)))
-#         cdo = c - cdi
-#         return cdo
-#     elif option_type == 'down-and-out call' and H >= K:
-#         cdo = (S0 * norm.cdf(x1) * np.exp(-q * T)) - (K * np.exp(-r * T ) * norm.cdf(x1 - (sigma * np.sqrt(T)))) - (S0 *np.exp(-q * T)*((H/S0)**(2*lambda_)) * norm.cdf(y1)) + (K * np.exp(-r * T) * ((H/S0)**((2*lambda_) - 2)) * norm.cdf(y1 - (sigma * np.sqrt(T))))
-#         # term1 = S0 * np.exp(-q * T) * norm.cdf(x1)
-#         # term2 = K * np.exp(-r * T) * norm.cdf(x1 - sigma * np.sqrt(T))
-#         # term3 = S0 * np.exp(-q * T) * (H / S0)**(2 * lambda_) * norm.cdf(y1)
-#         # term4 = K * np.exp(-r * T) * (H / S0)**(2 * lambda_ - 2) * norm.cdf(y1 - sigma * np.sqrt(T))
-    
-#         # Calculate the option price
-#         #cdo = term1 - term2 - term3 + term4
-#         if cdo < 0:
-#             return 0
-#         else:
-#             return cdo
-
-#     elif option_type == 'down-and-in call' and H >= K:
-#          cdo = (S0 * norm.cdf(x1) * np.exp(-q * T)) - (K * np.exp(-r * T ) * norm.cdf(x1 - (sigma * np.sqrt(T)))) - (S0 *np.exp(-q * T)*((H/S0)**2*lambda_) * norm.cdf(y1)) + (K * np.exp(-r * T) * ((H/S0)**((2*lambda_) - 2)) * norm.cdf(y1 - (sigma * np.sqrt(T))))
-#          cdi = c - cdo
-#          if cdo < 0:
-#             cdo = 0
-#             cdi   = c - cdo
-#             return cdi
-#          else:
-#             return cdi
-#     elif option_type == 'up-and-in call' and H > K:
-#         cui = (S0 * norm.cdf(x1) * np.exp(-q * T)) - (K * np.exp(-r * T ) * norm.cdf(x1 - (sigma * np.sqrt(T)))) - (S0 * np.exp(-q * T) * ((H/S0)**2*lambda_) * (norm.cdf(-y) - norm.cdf(-y1))) + (K * np.exp(-r * T) * ((H/S0)**(2*lambda_-2)) * (norm.cdf(-y + (sigma * np.sqrt(T))) - norm.cdf(-y1 + (sigma * np.sqrt(T)))))
-#         return cui
-#     elif option_type == 'up-and-in call' and H <= K:
-#         cui = c
-#         return cui
-#     elif option_type == 'up-and-out call' and H <= K:
-#         cuo = 0
-#         return cuo
-#     elif option_type == 'up-and-out call' and H > K:
-#         cui = (S0 * norm.cdf(x1) * np.exp(-q * T)) - (K * np.exp(-r * T ) * norm.cdf(x1 - (sigma * np.sqrt(T)))) - (S0 * np.exp(-q * T) * ((H/S0)**2*lambda_) * (norm.cdf(-y) - norm.cdf(-y1))) + (K * np.exp(-r * T) * ((H/S0)**(2*lambda_-2)) * (norm.cdf(-y + (sigma * np.sqrt(T))) - norm.cdf(-y1 + (sigma * np.sqrt(T)))))
-#         cuo = c - cui
-#         return cuo
-#         #if 
-#     elif option_type == 'up-and-in put' and H >= K:
-#         pui = (-S0 * np.exp(-q * T) * ((H/S0)**2*lambda_) * norm.cdf(-y)) + (K * np.exp(-r * T) * ((H/S0)**((2*lambda_)-2)) * norm.cdf(-y + (sigma * np.sqrt(T))))
-#         return pui
-#     elif option_type == 'up-and-out put' and H >= K:
-#         pui = (-S0 * np.exp(-q * T) * ((H/S0)**2*lambda_) * norm.cdf(-y)) + (K * np.exp(-r * T) * ((H/S0)**((2*lambda_)-2)) * norm.cdf(-y + (sigma * np.sqrt(T))))
-#         puo = p - pui
-#         return puo
-#     elif option_type == 'up-and-out put' and H <= K: ###
-#         # puo = (-S0 * norm.cdf(-x1) * np.exp(-q * T)) + (K * np.exp(-r * T) * norm.cdf(-x1 + (sigma * np.sqrt(T)))) + (S0 * np.exp(-q * T) * ((H/S0)**2*lambda_) * norm.cdf(-y1)) - (K * np.exp(-r * T) * ((H/S0)**(2*lambda_ - 2)) * norm.cdf(-y1 + (sigma* np.sqrt(T))))
-#         # puo = (-S0 * norm.cdf(-x1) * np.exp(-q * T)) + (K * np.exp(-r * T ) * norm.cdf(-x1 + (sigma * np.sqrt(T)))) + (S0 *np.exp(-q * T)*((H/S0)**2*lambda_) * norm.cdf(-y1)) - (K * np.exp(-r * T) * ((H/S0)**((2*lambda_) - 2)) * norm.cdf(-y1 + (sigma * np.sqrt(T))))
-#         puo = (-S0 * norm.cdf(-x1) * np.exp(-q * T)) + (K * np.exp(-r * T ) * norm.cdf(-x1 + (sigma * np.sqrt(T)))) + (S0 *np.exp(-q * T)*((H/S0)**2*lambda_) *(norm.cdf(-y1))) -(K * np.exp(-r * T) * ((H/S0)**(2*lambda_-2)) * (norm.cdf(-y1 + (sigma * np.sqrt(T)))))
-#         if puo < 0:
-#             return 0
-#         else:
-#             return puo
-#     elif option_type == 'up-and-in put' and H <= K:
-#         # puo = (-S0 * norm.cdf(-x1) * np.exp(-q * T)) + (K * np.exp(-r * T) * norm.cdf(-x1 + (sigma * np.sqrt(T)))) + (S0 * np.exp(-q * T) * ((H/S0)**2*lambda_) * norm.cdf(-y1)) - (K * np.exp(-r * T) * ((H/S0)**(2*lambda_ - 2)) * norm.cdf(-y1 + (sigma* np.sqrt(T)))) 
-#         #puo = (-S0 * norm.cdf(-x1) * np.exp(-q * T)) + (K * np.exp(-r * T ) * norm.cdf(-x1 + (sigma * np.sqrt(T)))) + (S0 *np.exp(-q * T)*((H/S0)**2*lambda_) * norm.cdf(-y1)) - (K * np.exp(-r * T) * ((H/S0)**((2*lambda_) - 2)) * norm.cdf(-y1 + (sigma * np.sqrt(T))))
-#         puo = (-S0 * norm.cdf(-x1) * np.exp(-q * T)) + (K * np.exp(-r * T ) * norm.cdf(-x1 + (sigma * np.sqrt(T)))) + (S0 *np.exp(-q * T)*((H/S0)**2*lambda_) *(norm.cdf(-y1))) -(K * np.exp(-r * T) * ((H/S0)**(2*lambda_-2)) * (norm.cdf(-y1 + (sigma * np.sqrt(T)))))
-#         if puo < 0:
-#             puo = 0
-#             pui = p - puo
-#             return pui
-#         else:
-#             pui = p -puo
-#             return pui 
-#     elif option_type == 'down-and-out put' and H > K:
-#         pdo = 0
-#         return pdo
-#     elif option_type == 'down-and-in put' and H > K:
-#         pdi = p
-#         return pdi
-#     elif option_type == 'down-and-in put' and H < K:
-#         pdi = (-S0 * norm.cdf(-x1) * np.exp(-q * T)) + (K * np.exp(-r * T) * norm.cdf(-x1 + (sigma * np.sqrt(T)))) + (S0 * np.exp(-q * T) * ((H/S0)**2*lambda_) * (norm.cdf(y) - norm.cdf(y1))) - (K * np.exp(-r * T) * ((H/S0)**(2*lambda_-2)) * (norm.cdf(y - (sigma * np.sqrt(T))) - norm.cdf(y1 - (sigma * np.sqrt(T)))))
-#         return pdi
-#     elif option_type == 'down-and-out put' and H < K:
-#         pdi = (-S0 * norm.cdf(-x1) * np.exp(-q * T)) + (K * np.exp(-r * T) * norm.cdf(-x1 + (sigma * np.sqrt(T)))) + (S0 * np.exp(-q * T) * ((H/S0)**2*lambda_) * (norm.cdf(y) - norm.cdf(y1))) - (K * np.exp(-r * T) * ((H/S0)**(2*lambda_-2)) * (norm.cdf(y - (sigma * np.sqrt(T))) - norm.cdf(y1 - (sigma * np.sqrt(T)))))
-#         pdo = p - pdi
-#         return pdo
-#     else:
-#         return None
-
-# # Streamlit UI
-# st.title("Barrier Option Pricing")
-# st.sidebar.header("Input Parameters")
-
-# S0 = st.sidebar.number_input("Stock Price (S0)", value=100.0)
-# K = st.sidebar.number_input("Strike Price (K)", value=100.0)
-# T = st.sidebar.number_input("Term (Years)", value=1.0)
-# r = st.sidebar.number_input("Risk-Free Rate (r)", value=0.05)
-# q = st.sidebar.number_input("Dividend Yield (q)", value=0.03)
-# sigma = st.sidebar.number_input("Volatility (σ)", value=0.2)
-# H = st.sidebar.number_input("Barrier (H)", value=80.0)
-# rebate = st.sidebar.number_input("Rebate", value=0.0)
-
-# option_type = st.sidebar.selectbox("Option Type", ["down-and-in call", "down-and-out call", "down-and-out put", "up-and-in call", "up-and-out call", "up-and-in put", "up-and-out put", "down-and-in put"])
-
-# # Calculate and display option price
-# option_price = barrier_option_price(S0, K, T, r, q, sigma, H, option_type)
-# if option_price is not None:
-#     st.write(f"**{option_type.capitalize()} Price:**${option_price:.2f}")
-# else:
-#     st.write("Invalid option type selected or option type not implemented.")
-#####################################################################################################################################################################################
 import streamlit as st
 import numpy as np
+import plotly.graph_objects as go
 from scipy.stats import norm
 
-import streamlit as st
-
-st.title("Barrier Option Pricing Equations")
-
-st.write("""
-### Regular Call and Put Options
-The prices at time zero of a regular European call option ($c$) and put option ($p$) are given by:
-""")
-st.latex(r"""
-c = S_0 e^{-qT} N(d_1) - K e^{-rT} N(d_2)
-""")
-st.latex(r"""
-p = K e^{-rT} N(-d_2) - S_0 e^{-qT} N(-d_1)
-""")
-st.write("Where:")
-st.latex(r"""
-d_1 = \frac{\ln(S_0/K) + (r - q + \sigma^2/2)T}{\sigma\sqrt{T}}, \quad
-d_2 = d_1 - \sigma\sqrt{T}
-""")
-
-st.write("""
-### Down-and-In Call Option for $H$ $\leq$ $K$
-""")
-st.latex(r"""
-c_{di} = S_0 e^{-qT} \left(\frac{H}{S_0}\right)^{2\lambda} N(y) - K e^{-rT} \left(\frac{H}{S_0}\right)^{2\lambda-2} N(y - \sigma\sqrt{T})
-""")
-st.latex(r"""
-\text{Where: } 
-\lambda = \frac{r - q + \sigma^2/2}{\sigma^2}, \quad
-y = \frac{\ln(H^2 / (S_0 K))}{\sigma\sqrt{T}} + \lambda\sigma\sqrt{T}
-""")
-
-st.write("""
-### Down-and-Out Call Option for $H$ $\leq$ $K$
-""")
-st.latex(r"""
-c_{do} = c - c_{di}
-""")
-
-st.write("""
-### Down-and-Out Call Option for $H$ $\geq$ $K$
-""")
-
-st.latex(r"""
-c_{do} = S_0 N(x_1) e^{-qT} - K e^{-rT} N(x_1 - \sigma\sqrt{T}) 
-        - S_0 e^{-qT} \left(\frac{H}{S_0}\right)^{2\lambda} N(y_1) 
-        + K e^{-rT} \left(\frac{H}{S_0}\right)^{2\lambda-2} N(y_1 - \sigma\sqrt{T})
-""")
-st.latex(r"""
-\text{Where: }
-x_1 = \frac{\ln(S_0 / H)}{\sigma\sqrt{T}} + \lambda\sigma\sqrt{T}, \quad
-y_1 = \frac{\ln(H / S_0)}{\sigma\sqrt{T}} + \lambda\sigma\sqrt{T}
-""")
-
-st.write("""
-### Down-and-In Call Option for $H$ $\geq$ $K$
-""")
-
-st.latex(r"""
-c_{di} = c - c_{do}
-""")
-
-
-st.write("""
-### Up-and-In Call Option for $H$ $\geq$ $K$
-
-""")
-st.latex(r"""
-c_{ui} = S_0 N(x_1) e^{-qT} - K e^{-rT} N(x_1 - \sigma\sqrt{T}) 
-        - S_0 e^{-qT} \left(\frac{H}{S_0}\right)^{2\lambda}[N(-y) - N(-y_1)] + K e^{-rT} \left(\frac{H}{S_0}\right)^{2\lambda-2} [N(-y + \sigma\sqrt{T} - N(-y_1 + \sigma\sqrt{T})]
-""")
-
-st.write("""
-### Up-and-Out Call Option for $H$ $\geq$ $K$
-""")
-st.latex(r"""
-c_{uo} = c - c_{ui}
-""")
-
-st.write(""" 
-         ### Up-and-In Put Option for $H$ $\geq$ $K$
-         """)
-st.latex(r"""
-p_{ui} = -S_0 e^{-qT} \left(\frac{H}{S_0}\right)^{2\lambda} N(-y) 
-         + K e^{-rT} \left(\frac{H}{S_0}\right)^{2\lambda-2} N(-y + \sigma\sqrt{T})
-""")
-
-st.write(""" 
-         ### Up-and-Out Put Option for $H$ $\geq$ $K$
-         """)
-
-st.latex(r"""
-p_{uo} = p - p_{ui}
-""")
-
-st.write(""" 
-         ### Up-and-Out Put Option for $H$ $\leq$ $K$
-         """)
-st.latex(r"""
-    p_{uo} = -S_0 N(-x_1) e^{-qT} + K e^{-rT} N(-x_1 + \sigma\sqrt{T}) 
-         + S_0 e^{-qT} \left(\frac{H}{S_0}\right)^{2\lambda} N(-y_1) 
-         - K e^{-rT} \left(\frac{H}{S_0}\right)^{2\lambda-2} N(-y_1 + \sigma\sqrt{T})
-         """)
-
-st.write(""" 
-         ### Up-and-In Put Option for $H$ $\leq$ $K$
-         """)
-st.latex(r"""
-p_{ui} = p - p_{uo}
-""")
-
-st.write(""" 
-         ### Down-and-Out Put Option for $H$ $\geq$ $K$
-         """)
-st.latex(r"""
-p_{do} = 0
-""")
-
-st.write(""" 
-         ### Down-and-In Put Option for $H$ $\geq$ $K$
-         """)
-st.latex(r"""
-p_{di} = p
-""")
-
-st.write(""" 
-         ### Down-and-In Put Option for $H$ $\leq$ $K$
-         """)
-
-st.latex(r"""
-    p_{uo} = -S_0 N(-x_1) e^{-qT} + K e^{-rT} N(-x_1 + \sigma\sqrt{T}) 
-         + S_0 e^{-qT} \left(\frac{H}{S_0}\right)^{2\lambda} [N(y) - N(y_1)] - K e^{-rT} \left(\frac{H}{S_0}\right)^{2\lambda - 2} [N(y - \sigma\sqrt{T}) - N(y_1 - \sigma\sqrt{T})]
-         """)
-
-st.write(""" 
-         ### Down-and-Out Put Option for $H$ $\leq$ $K$
-         """)
-st.latex(r"""
-p_{do} = p - p_{di}
-""")
-
-
-
-
-
-
 # ------------------------------
-# 1) Helper functions
+# Barrier Option Pricing Functions
 # ------------------------------
 
 def calc_d1(S0, K, r, q, sigma, T):
@@ -334,29 +28,23 @@ def calc_p(S0, K, r, q, sigma, T):
             - S0 * np.exp(-q*T)*norm.cdf(-d1))
 
 def calc_lambda(r, q, sigma):
-    # λ = (r - q + σ²/2) / σ²
+
     return (r - q + 0.5 * sigma**2) / (sigma**2)
 
-def calc_y(H, S0, K, T, sigma, r, q):
-    """
-    y = [ln(H^2/(S0*K)) / (sigma*sqrt(T))] + λ * sigma * sqrt(T)
-    """
-    lam = calc_lambda(r, q, sigma)
-    return (np.log((H**2)/(S0*K)) / (sigma*np.sqrt(T))) + lam*sigma*np.sqrt(T)
+def calc_y(barrier, S0, K, T, sigma, r, q):
 
-def calc_x1(S0, H, T, sigma, r, q):
-    """
-    x1 = ln(S0/H)/(sigma*sqrt(T)) + λ*sigma*sqrt(T)
-    """
     lam = calc_lambda(r, q, sigma)
-    return (np.log(S0/H) / (sigma*np.sqrt(T))) + lam*sigma*np.sqrt(T)
+    return (np.log((barrier**2)/(S0*K)) / (sigma*np.sqrt(T))) + lam*sigma*np.sqrt(T)
 
-def calc_y1(S0, H, T, sigma, r, q):
-    """
-    y1 = ln(H/S0)/(sigma*sqrt(T)) + λ*sigma*sqrt(T)
-    """
+def calc_x1(S0, barrier, T, sigma, r, q):
+
     lam = calc_lambda(r, q, sigma)
-    return (np.log(H/S0) / (sigma*np.sqrt(T))) + lam*sigma*np.sqrt(T)
+    return (np.log(S0/barrier) / (sigma*np.sqrt(T))) + lam*sigma*np.sqrt(T)
+
+def calc_y1(S0, barrier, T, sigma, r, q):
+
+    lam = calc_lambda(r, q, sigma)
+    return (np.log(barrier/S0) / (sigma*np.sqrt(T))) + lam*sigma*np.sqrt(T)
 
 def black_scholes(S, K, T, r, sigma, option_type):
     d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
@@ -369,46 +57,43 @@ def black_scholes(S, K, T, r, sigma, option_type):
         price = K * np.exp(-r * T) * norm.cdf(-d2) - S * norm.cdf(-d1)
         return price
 
+
 # ------------------------------
 # 2) Main barrier pricing function
 # ------------------------------
 
-def barrier_option_price(S0, K, T, r, q, sigma, H, option_type):
-    """
-    Returns the price of a barrier option (various knock-in/out types).
-    Matches standard formulas from texts like Hull, with care to keep
-    exponents and sign conventions correct.
-    """
-    x1 = calc_x1(S0, H, T, sigma, r, q)
-    y1 = calc_y1(S0, H, T, sigma, r, q)
+def barrier_option_price(S0, K, T, r, q, sigma, barrier, option_type):
+
+    x1 = calc_x1(S0, barrier, T, sigma, r, q)
+    y1 = calc_y1(S0, barrier, T, sigma, r, q)
     c = calc_c(S0, K, r, q, sigma, T)
     p = calc_p(S0, K, r, q, sigma, T)
     lam = calc_lambda(r, q, sigma)
-    y  = calc_y(H, S0, K, T, sigma, r, q)
+    y  = calc_y(barrier, S0, K, T, sigma, r, q)
 
     # --------------------------------
     # Down-and-in Call
     # --------------------------------
     
-    if option_type == 'down-and-in call' and H <= K and S0 <= H:
+    if option_type == 'down-and-in call' and barrier <= K and S0 <= barrier:
         vanilla = black_scholes(S0, K, T, r, sigma, "Call")
         return vanilla
     
-    elif option_type == 'down-and-in call' and H <= K:
-        # cdi, for H <= K
-        cdi = (S0 * np.exp(-q*T) * (H/S0)**(2*lam) * norm.cdf(y)
-               - K * np.exp(-r*T) * (H/S0)**(2*lam - 2)
+    elif option_type == 'down-and-in call' and barrier <= K:
+        # cdi, for barrier <= K
+        cdi = (S0 * np.exp(-q*T) * (barrier/S0)**(2*lam) * norm.cdf(y)
+               - K * np.exp(-r*T) * (barrier/S0)**(2*lam - 2)
                  * norm.cdf(y - sigma*np.sqrt(T)))
         return cdi
 
-    elif option_type == 'down-and-in call' and H >= K:
+    elif option_type == 'down-and-in call' and barrier >= K:
         # cdi = c - cdo. So we compute cdo from the standard expression
         # cdo = ...
         # Then cdi = c - cdo
         term1 = S0*np.exp(-q*T)*norm.cdf(x1)
         term2 = K*np.exp(-r*T)*norm.cdf(x1 - sigma*np.sqrt(T))
-        term3 = S0*np.exp(-q*T)*(H/S0)**(2*lam)*norm.cdf(y1)
-        term4 = K*np.exp(-r*T)*(H/S0)**(2*lam - 2)*norm.cdf(y1 - sigma*np.sqrt(T))
+        term3 = S0*np.exp(-q*T)*(barrier/S0)**(2*lam)*norm.cdf(y1)
+        term4 = K*np.exp(-r*T)*(barrier/S0)**(2*lam - 2)*norm.cdf(y1 - sigma*np.sqrt(T))
         cdo   = term1 - term2 - term3 + term4
         if cdo < 0:
             cdo = 0
@@ -421,10 +106,10 @@ def barrier_option_price(S0, K, T, r, q, sigma, H, option_type):
     # --------------------------------
     # Down-and-out Call
     # --------------------------------
-    elif option_type == 'down-and-out call' and H <= K:
+    elif option_type == 'down-and-out call' and barrier <= K:
 
-        cdi = (S0 * np.exp(-q*T) * (H/S0)**(2*lam) * norm.cdf(y)
-            - K * np.exp(-r*T) * (H/S0)**(2*lam - 2)
+        cdi = (S0 * np.exp(-q*T) * (barrier/S0)**(2*lam) * norm.cdf(y)
+            - K * np.exp(-r*T) * (barrier/S0)**(2*lam - 2)
                 * norm.cdf(y - sigma*np.sqrt(T)))
         cdo = c - cdi
         if cdo > 0:
@@ -432,12 +117,12 @@ def barrier_option_price(S0, K, T, r, q, sigma, H, option_type):
         else:
             return 0
 
-    elif option_type == 'down-and-out call' and H >= K:
-        # This is the “If H > K” formula for the down-and-out call
+    elif option_type == 'down-and-out call' and barrier >= K:
+        # This is the “If barrier > K” formula for the down-and-out call
         term1 = S0 * np.exp(-q*T)*norm.cdf(x1)
         term2 = K  * np.exp(-r*T)*norm.cdf(x1 - sigma*np.sqrt(T))
-        term3 = S0 * np.exp(-q*T)*((H/S0)**(2*lam))*norm.cdf(y1)
-        term4 = K  * np.exp(-r*T)*((H/S0)**(2*lam - 2))*norm.cdf(y1 - sigma*np.sqrt(T))
+        term3 = S0 * np.exp(-q*T)*((barrier/S0)**(2*lam))*norm.cdf(y1)
+        term4 = K  * np.exp(-r*T)*((barrier/S0)**(2*lam - 2))*norm.cdf(y1 - sigma*np.sqrt(T))
         cdo   = term1 - term2 - term3 + term4
         
         if cdo < 0:
@@ -448,36 +133,36 @@ def barrier_option_price(S0, K, T, r, q, sigma, H, option_type):
     # --------------------------------
     # Up-and-in Call
     # --------------------------------
-    elif option_type == 'up-and-in call' and H > K:
-        # Standard up-and-in call for H > K
+    elif option_type == 'up-and-in call' and barrier > K:
+        # Standard up-and-in call for barrier > K
         cui = (S0*np.exp(-q*T)*norm.cdf(x1)
                - K*np.exp(-r*T)*norm.cdf(x1 - sigma*np.sqrt(T))
-               - S0*np.exp(-q*T)*(H/S0)**(2*lam)*(norm.cdf(-y) - norm.cdf(-y1))
-               + K*np.exp(-r*T)*(H/S0)**(2*lam - 2)
+               - S0*np.exp(-q*T)*(barrier/S0)**(2*lam)*(norm.cdf(-y) - norm.cdf(-y1))
+               + K*np.exp(-r*T)*(barrier/S0)**(2*lam - 2)
                  * (norm.cdf(-y + sigma*np.sqrt(T))
                     - norm.cdf(-y1 + sigma*np.sqrt(T))))
         return cui
 
-    elif option_type == 'up-and-in call' and H <= K:
+    elif option_type == 'up-and-in call' and barrier <= K:
         # If barrier is below K, the up-and-in call is effectively the same as c
-        # or 0, depending on your setup.  Typically if H < S0 < K,
-        # the option knocks in only if S0 goes above H.  If you are sure
+        # or 0, depending on your setup.  Typically if barrier < S0 < K,
+        # the option knocks in only if S0 goes above barrier.  If you are sure
         # you want to treat it as simply c, do so here:
         return c
 
     # --------------------------------
     # Up-and-out Call
     # --------------------------------
-    elif option_type == 'up-and-out call' and H <= K:
+    elif option_type == 'up-and-out call' and barrier <= K:
         # If the barrier barrier <= K is below the current spot,
         # often up-and-out call is worthless if it is truly "up" barrier?
         return 0.0
 
-    elif option_type == 'up-and-out call' and H > K:
+    elif option_type == 'up-and-out call' and barrier > K:
         cui = (S0*np.exp(-q*T)*norm.cdf(x1)
                - K*np.exp(-r*T)*norm.cdf(x1 - sigma*np.sqrt(T))
-               - S0*np.exp(-q*T)*(H/S0)**(2*lam)*(norm.cdf(-y) - norm.cdf(-y1))
-               + K*np.exp(-r*T)*(H/S0)**(2*lam - 2)
+               - S0*np.exp(-q*T)*(barrier/S0)**(2*lam)*(norm.cdf(-y) - norm.cdf(-y1))
+               + K*np.exp(-r*T)*(barrier/S0)**(2*lam - 2)
                  * (norm.cdf(-y + sigma*np.sqrt(T))
                     - norm.cdf(-y1 + sigma*np.sqrt(T))))
         cuo = c - cui
@@ -485,23 +170,27 @@ def barrier_option_price(S0, K, T, r, q, sigma, H, option_type):
             return cuo
         else:
             return 0
+        
 
     # --------------------------------
     # Up-and-in Put
     # --------------------------------
-    elif option_type == 'up-and-in put' and H >= K:
-        pui = (-S0*np.exp(-q*T)*(H/S0)**(2*lam)*norm.cdf(-y)
-               + K*np.exp(-r*T)*(H/S0)**(2*lam - 2)
+    elif option_type == 'up-and-in put' and barrier >= K and barrier <= S0:
+        pui = black_scholes(S0,K,T,r,sigma,"Put")
+        return pui
+    elif option_type == 'up-and-in put' and barrier >= K:
+        pui = (-S0*np.exp(-q*T)*(barrier/S0)**(2*lam)*norm.cdf(-y)
+               + K*np.exp(-r*T)*(barrier/S0)**(2*lam - 2)
                  * norm.cdf(-y + sigma*np.sqrt(T)))
         return pui
     
         # --------------------------------
-    elif option_type == 'up-and-in put' and H <= K:
+    elif option_type == 'up-and-in put' and barrier <= K:
         puo = (
             -S0*np.exp(-q*T)*norm.cdf(-x1)
             + K*np.exp(-r*T)*norm.cdf(-x1 + sigma*np.sqrt(T))
-            + S0*np.exp(-q*T)*(H/S0)**(2*lam)*norm.cdf(-y1)
-            - K*np.exp(-r*T)*(H/S0)**(2*lam - 2)*norm.cdf(-y1 + sigma*np.sqrt(T))
+            + S0*np.exp(-q*T)*(barrier/S0)**(2*lam)*norm.cdf(-y1)
+            - K*np.exp(-r*T)*(barrier/S0)**(2*lam - 2)*norm.cdf(-y1 + sigma*np.sqrt(T))
         )
         if puo < 0:
             puo = 0
@@ -512,34 +201,34 @@ def barrier_option_price(S0, K, T, r, q, sigma, H, option_type):
         
         return pui
     
-    elif option_type == 'up-and-in put' and H <= K:
+    elif option_type == 'up-and-in put' and barrier <= K:
         # up-and-in put is the difference p - up-and-out put
         # but for the simplified logic, we can just return p if the barrier is < K
-        return black_scholes(S0,K,T,r,sigma,"Put")
+        return p
 
     # --------------------------------
     # Up-and-out Put
     # --------------------------------
-    elif option_type == 'up-and-out put' and H >= K:
+    elif option_type == 'up-and-out put' and barrier >= K:
         # puo = p - pui
-        pui = (-S0*np.exp(-q*T)*(H/S0)**(2*lam)*norm.cdf(-y)
-               + K*np.exp(-r*T)*(H/S0)**(2*lam - 2)
+        pui = (-S0*np.exp(-q*T)*(barrier/S0)**(2*lam)*norm.cdf(-y)
+               + K*np.exp(-r*T)*(barrier/S0)**(2*lam - 2)
                  * norm.cdf(-y + sigma*np.sqrt(T)))
         if pui > 0:
-            puo = black_scholes(S0,K,T,r,sigma,"Put") - pui
+            puo = p - pui
             return puo
         else:
             pui = 0
-            puo = black_scholes(S0,K,T,r,sigma,"Put") - pui
+            puo = p - pui
             return puo
 
-    elif option_type == 'up-and-out put' and H <= K:
+    elif option_type == 'up-and-out put' and barrier <= K:
         # Standard formula for barrier <= K
         puo = (
             -S0*np.exp(-q*T)*norm.cdf(-x1)
             + K*np.exp(-r*T)*norm.cdf(-x1 + sigma*np.sqrt(T))
-            + S0*np.exp(-q*T)*(H/S0)**(2*lam)*norm.cdf(-y1)
-            - K*np.exp(-r*T)*(H/S0)**(2*lam - 2)*norm.cdf(-y1 + sigma*np.sqrt(T))
+            + S0*np.exp(-q*T)*(barrier/S0)**(2*lam)*norm.cdf(-y1)
+            - K*np.exp(-r*T)*(barrier/S0)**(2*lam - 2)*norm.cdf(-y1 + sigma*np.sqrt(T))
         )
         if puo < 0:
             puo = 0
@@ -547,23 +236,24 @@ def barrier_option_price(S0, K, T, r, q, sigma, H, option_type):
         else:
             return puo
 
+
     # --------------------------------
     # Down-and-in Put
     # --------------------------------
-    elif option_type == 'down-and-in put' and H < K and S0 < H:
+    elif option_type == 'down-and-in put' and barrier < K and S0 < barrier:
         vanilla = black_scholes(S0, K, T, r, sigma, "Put")
         return vanilla
     
-    elif option_type == 'down-and-in put' and H > K:
+    elif option_type == 'down-and-in put' and barrier > K:
         # If the barrier is above K, we often treat the down-and-in put as p
         return p
 
-    elif option_type == 'down-and-in put' and H < K:
+    elif option_type == 'down-and-in put' and barrier < K:
         pdi = (
             -S0*np.exp(-q*T)*norm.cdf(-x1)
             + K*np.exp(-r*T)*norm.cdf(-x1 + sigma*np.sqrt(T))
-            + S0*np.exp(-q*T)*(H/S0)**(2*lam)*(norm.cdf(y) - norm.cdf(y1))
-            - K*np.exp(-r*T)*(H/S0)**(2*lam - 2)
+            + S0*np.exp(-q*T)*(barrier/S0)**(2*lam)*(norm.cdf(y) - norm.cdf(y1))
+            - K*np.exp(-r*T)*(barrier/S0)**(2*lam - 2)
               * (norm.cdf(y - sigma*np.sqrt(T))
                  - norm.cdf(y1 - sigma*np.sqrt(T)))
         )
@@ -572,16 +262,16 @@ def barrier_option_price(S0, K, T, r, q, sigma, H, option_type):
     # --------------------------------
     # Down-and-out Put
     # --------------------------------
-    elif option_type == 'down-and-out put' and H > K:
-        # Typically worthless if H > K in certain setups
+    elif option_type == 'down-and-out put' and barrier > K:
+        # Typically worthless if barrier > K in certain setups
         return 0
 
-    elif option_type == 'down-and-out put' and H < K:
+    elif option_type == 'down-and-out put' and barrier < K:
         pdi = (
             -S0*np.exp(-q*T)*norm.cdf(-x1)
             + K*np.exp(-r*T)*norm.cdf(-x1 + sigma*np.sqrt(T))
-            + S0*np.exp(-q*T)*(H/S0)**(2*lam)*(norm.cdf(y) - norm.cdf(y1))
-            - K*np.exp(-r*T)*(H/S0)**(2*lam - 2)
+            + S0*np.exp(-q*T)*(barrier/S0)**(2*lam)*(norm.cdf(y) - norm.cdf(y1))
+            - K*np.exp(-r*T)*(barrier/S0)**(2*lam - 2)
               * (norm.cdf(y - sigma*np.sqrt(T))
                  - norm.cdf(y1 - sigma*np.sqrt(T)))
         )
@@ -594,11 +284,13 @@ def barrier_option_price(S0, K, T, r, q, sigma, H, option_type):
     # Fallback
     return None
 
+
+
 # ------------------------------
-# 3) Streamlit UI
+# Streamlit UI
 # ------------------------------
 
-st.title("Barrier Option Pricing")
+st.title("Analytical Barrier Option Pricing Dashboard")
 st.sidebar.header("Input Parameters")
 
 S0 = st.sidebar.number_input("Stock Price (S0)", value=100.0)
@@ -624,8 +316,110 @@ option_type = st.sidebar.selectbox(
     ]
 )
 
-option_price = barrier_option_price(S0, K, T, r, q, sigma, H, option_type)
-if option_price is not None:
-    st.write(f"**{option_type.capitalize()} Price:** ${option_price:.4f}")
+# Compute the analytical barrier option price
+analytical_price = barrier_option_price(S0, K, T, r, q, sigma, H, option_type)
+
+# ------------------------------
+# Custom CSS for Info Boxes
+# ------------------------------
+st.markdown(
+    """
+    <style>
+    .info-box {
+        background-color: #f1f1f1;
+        border-left: 5px solid #007ACC;
+        padding: 1rem;
+        margin: 1rem 0;
+        border-radius: 5px;
+    }
+    .info-box h4 {
+        margin: 0;
+        color: #007ACC;
+    }
+    .info-box p {
+        margin: 0.5rem 0 0;
+        font-size: 1.2rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+def create_info_box(title, value):
+    return f"<div class='info-box'><h4>{title}</h4><p>{value}</p></div>"
+
+# ------------------------------
+# Display Key Output in Info Box (only the analytical barrier option price)
+# ------------------------------
+if analytical_price is not None:
+    st.markdown(create_info_box("Analytical Barrier Option Price", f"${analytical_price:.4f}"), unsafe_allow_html=True)
 else:
-    st.write("Invalid option type selected or option type not implemented.")
+    st.markdown(create_info_box("Error", "Invalid option type or parameters."), unsafe_allow_html=True)
+
+# ------------------------------
+# Sensitivity Analysis: Option Price vs. Barrier Level (2D Plot)
+# ------------------------------
+st.subheader("Sensitivity Analysis: Option Price vs. Barrier Level")
+barrier_range = np.linspace(0.8 * H, 1.2 * H, 50)
+price_vs_barrier = []
+for h in barrier_range:
+    p_val = barrier_option_price(S0, K, T, r, q, sigma, h, option_type)
+    price_vs_barrier.append(p_val if p_val is not None else np.nan)
+
+fig_barrier = go.Figure()
+fig_barrier.add_trace(go.Scatter(x=barrier_range, y=price_vs_barrier,
+                                 mode='lines+markers', name="Option Price"))
+fig_barrier.update_layout(
+    title="Option Price vs. Barrier Level",
+    xaxis_title="Barrier Level",
+    yaxis_title="Option Price"
+)
+st.plotly_chart(fig_barrier, use_container_width=True)
+
+# ------------------------------
+# New Section: Option Price vs. Stock Price & 3D Surface Plot
+# ------------------------------
+st.subheader("Option Price vs. Stock Price and 3D Surface")
+
+# 2D Plot: Option Price vs. Stock Price (today's value, with fixed barrier H)
+stock_range = np.linspace(0.8 * S0, 1.2 * S0, 50)
+price_vs_stock = []
+for s in stock_range:
+    p_val = barrier_option_price(s, K, T, r, q, sigma, H, option_type)
+    price_vs_stock.append(p_val if p_val is not None else np.nan)
+
+fig_stock = go.Figure()
+fig_stock.add_trace(go.Scatter(x=stock_range, y=price_vs_stock,
+                              mode='lines+markers', name="Option Price"))
+fig_stock.update_layout(
+    title="Option Price vs. Stock Price (Today's Value)",
+    xaxis_title="Stock Price",
+    yaxis_title="Option Price"
+)
+
+# 3D Surface Plot: Option Price as function of Stock Price and Barrier Level
+stock_range_3d = np.linspace(0.8 * S0, 1.2 * S0, 30)
+barrier_range_3d = np.linspace(0.8 * H, 1.2 * H, 30)
+S_mesh, H_mesh = np.meshgrid(stock_range_3d, barrier_range_3d)
+price_surface = np.zeros_like(S_mesh)
+for i in range(S_mesh.shape[0]):
+    for j in range(S_mesh.shape[1]):
+        p_val = barrier_option_price(S_mesh[i, j], K, T, r, q, sigma, H_mesh[i, j], option_type)
+        price_surface[i, j] = p_val if p_val is not None else np.nan
+
+fig_3d = go.Figure(data=[go.Surface(x=S_mesh, y=H_mesh, z=price_surface)])
+fig_3d.update_layout(
+    title="3D Surface: Option Price vs. Stock Price & Barrier Level",
+    scene=dict(
+        xaxis_title="Stock Price",
+        yaxis_title="Barrier Level",
+        zaxis_title="Option Price"
+    )
+)
+
+# Display the 2D and 3D plots side by side
+colA, colB = st.columns(2)
+with colA:
+    st.plotly_chart(fig_stock, use_container_width=True)
+with colB:
+    st.plotly_chart(fig_3d, use_container_width=True)

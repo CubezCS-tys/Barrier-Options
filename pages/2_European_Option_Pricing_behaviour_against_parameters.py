@@ -34,7 +34,7 @@ def black_scholes(S, K, T, r, sigma):
 # ----------------------------
 # Streamlit App Layout
 # ----------------------------
-st.set_page_config(page_title="Black-Scholes Option Pricing")
+st.set_page_config(page_title="Black-Scholes Option Pricing", layout = "wide")
 
 st.title("Black-Scholes Option Pricing behaviour against different parameters")
 
