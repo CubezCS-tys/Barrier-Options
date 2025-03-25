@@ -271,10 +271,11 @@ def monte_carlo_barrier_option_combined(S0, K, H, T, r, q, sigma, M, N, option_t
 # -------------------------------------------------------------------
 # 3) Sample Path Simulation (for plotting)
 # -------------------------------------------------------------------
-def simulate_paths(S0, K, H, T, r, q, sigma, M, option_type, rebate, use_antithetic):
+def simulate_paths(S0, K, H, T, r, q, sigma, M, N, option_type, rebate, use_antithetic):
     dt = T / M
     time_grid = np.linspace(0, T, M+1)
-    num_paths = min(500, 10000)
+    #num_paths = min(500, 10000)
+    num_paths = N
     sample_paths  = []
     payoff_samples= []
     sample_status = []
@@ -348,7 +349,7 @@ r     = st.sidebar.number_input("Risk-Free Rate (r)", min_value=0.0, value=0.05,
 q     = st.sidebar.number_input("Dividend Yield (q)", min_value=0.0, value=0.02, step=0.01, format="%.4f")
 sigma = st.sidebar.number_input("Volatility (σ in %)", min_value=0.01, value=20.0, step=0.1, format="%.2f")/100
 M     = st.sidebar.number_input("Number of Time Steps (M)", min_value=1, value=100)
-N     = st.sidebar.number_input("Number of Simulation Paths (N)", min_value=100, value=10000, step=100)
+N     = st.sidebar.number_input("Number of Simulation Paths (N)", min_value=1, value=10000, step=100)
 rebate= st.sidebar.number_input("Rebate", min_value=0.0, value=0.0, step=1.0)
 S_min = st.sidebar.number_input("Sensitivity - Minimum Stock Price", value=80.0)
 S_max = st.sidebar.number_input("Sensitivity - Maximum Stock Price", value=120.0)
@@ -410,7 +411,7 @@ if st.sidebar.button("Calculate Option Price"):
         
         # Simulate sample paths for the tab's chosen method
         time_grid, sample_paths, payoff_samples, sample_status = simulate_paths(
-            S0, K, H, T, r, q, sigma, int(M), option_type, rebate, flag_antithetic
+            S0, K, H, T, r, q, sigma, int(M), int(N),option_type, rebate, flag_antithetic
         )
         
         with tabs[idx]:
