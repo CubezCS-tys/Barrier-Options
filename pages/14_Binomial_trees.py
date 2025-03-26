@@ -687,6 +687,59 @@ def barrier_binomial_option_price(S0, K, r, q_div, T, sigma, steps,
     return f(0, 0, False)
 
 
+def nonuniform_barrier_binomial_price(S0, K, T, r, sigma, N, barrier, option_type, gamma, rebate=0.0):
+    """
+    Computes the option price using a nonuniform binomial tree that clusters nodes near the barrier.
+    The asset price at node (i, j) is given by:
+      S(i,j) = barrier + (S0 - barrier) * (j/i)^(1/gamma)
+    for i = 1,...,N and j = 0,...,i.
+    
+    When gamma > 1, nodes are more densely clustered near the barrier.
+    
+    Note: This tree is non-recombining and is for demonstration purposes.
+    """
+    dt = T / N
+    discount = math.exp(-r * dt)
+    
+    # Initialize asset prices and option values at maturity.
+    # For i = N, we create N+1 nodes.
+    prices = []
+    values = []
+    for j in range(N+1):
+        if N > 0:
+            S_val = barrier + (S0 - barrier) * ((j / N) ** (1/gamma))
+        else:
+            S_val = S0
+        prices.append(S_val)
+        if option_type.lower() == "call":
+            payoff = max(S_val - K, 0)
+        else:
+            payoff = max(K - S_val, 0)
+        # If S falls below the barrier, use rebate.
+        if S_val <= barrier:
+            payoff = rebate
+        values.append(payoff)
+    
+    # Backward induction on the nonuniform tree.
+    # Note: Because the tree is non-recombining, the probability calculation is heuristic.
+    for i in range(N, 0, -1):
+        new_values = []
+        for j in range(i):
+            # For the parent node, recalculate the asset price.
+            if i-1 > 0:
+                S_parent = barrier + (S0 - barrier) * ((j / (i-1)) ** (1/gamma))
+            else:
+                S_parent = S0
+            # Use standard CRR probabilities with dt (as an approximation).
+            u = math.exp(sigma * math.sqrt(dt))
+            d = 1.0 / u
+            p = (math.exp(r * dt) - d) / (u - d)
+            value = discount * (p * values[j+1] + (1 - p) * values[j])
+            # For simplicity, we compute the weighted average:
+            value = discount * (p * values[j+1] + (1 - p) * values[j])
+            new_values.append(value)
+        values = new_values
+    return values[0]
 # -------------------------------
 # 3. Enhanced Binomial Tree Visualization
 # -------------------------------
@@ -758,69 +811,109 @@ def combine_barrier_and_side(barrier_option_type, side):
 # -------------------------------
 # 4. Streamlit App
 # -------------------------------
-def main():
-    st.title("Option Pricing with Binomial Trees (Enhanced)")
+st.set_page_config(page_title="Option Pricing with Binomial Trees", layout= "wide")
+st.title("Option Pricing with Binomial Trees")
 
-    st.markdown("""
-    This app prices both **vanilla European** options and **barrier** options 
-    using a binomial tree. It also compares with an **analytical formula** 
-    (for certain barrier types) and shows **error analysis**.
-    """)
 
-    # Sidebar inputs
-    with st.sidebar:
-        st.header("Model Parameters")
-        S0 = st.number_input("Initial Stock Price (S0)", value=100.0, min_value=0.0, step=1.0)
-        K  = st.number_input("Strike Price (K)",         value=100.0, min_value=0.0, step=1.0)
-        r  = st.number_input("Risk-Free Rate (r)",      value=0.05,  min_value=0.0, step=0.01, format="%.4f")
-        q_div = st.number_input("Dividend Yield (q)",   value=0.00,  min_value=0.0, step=0.01, format="%.4f")
-        T  = st.number_input("Time to Maturity (T, yrs)", value=1.0, min_value=0.0, step=0.25)
-        sigma = st.number_input("Volatility (sigma)",   value=0.2,  min_value=0.0, step=0.01, format="%.4f")
-        steps = st.number_input("Binomial Steps",       value=5,    min_value=1,   step=1)
+# Custom CSS for info boxes
+st.markdown(
+    """
+    <style>
+    .info-box {
+        background-color: #f9f9f9;
+        border-left: 5px solid #007ACC;
+        padding: 1rem;
+        margin: 1rem 0;
+        border-radius: 5px;
+        text-align: center;
+    }
+    .info-box h4 {
+        margin: 0;
+        color: #007ACC;
+    }
+    .info-box p {
+        margin: 0.5rem 0 0;
+        font-size: 1.2rem;
+    }
+    </style>
+    """, unsafe_allow_html=True
+)
+def create_info_box(title, value):
+    return f"<div class='info-box'><h4>{title}</h4><p>{value}</p></div>"
 
-        option_style = st.radio("Option Style", ("Vanilla", "Barrier"))
-        option_side  = st.selectbox("Option Side", ["call", "put"])
+st.markdown("""
+This app prices both **vanilla European** options and **barrier** options 
+using a binomial tree. It also compares with an **analytical formula** 
+(for certain barrier types) and shows **error analysis**.
+""")
 
-        # Barrier-specific inputs
-        if option_style == "Barrier":
-            barrier_option_type = st.selectbox("Barrier Option Type", 
-                ["Up-and-Out", "Down-and-Out", "Up-and-In", "Down-and-In"])
-            H = st.number_input("Barrier Level (H)", value=110.0, min_value=0.0, step=1.0)
-            rebate = st.number_input("Rebate (if knocked out)", value=0.0, min_value=0.0, step=0.1)
+# Sidebar inputs
+with st.sidebar:
+    st.header("Model Parameters")
+    S0 = st.number_input("Initial Stock Price (S0)", value=100.0, min_value=0.0, step=1.0)
+    K  = st.number_input("Strike Price (K)",         value=100.0, min_value=0.0, step=1.0)
+    r  = st.number_input("Risk-Free Rate (r)",      value=0.05,  min_value=0.0, step=0.01, format="%.4f")
+    q_div = st.number_input("Dividend Yield (q)",   value=0.00,  min_value=0.0, step=0.01, format="%.4f")
+    T  = st.number_input("Time to Maturity (T, yrs)", value=1.0, min_value=0.0, step=0.25)
+    sigma = st.number_input("Volatility (sigma)",   value=0.2,  min_value=0.0, step=0.01, format="%.4f")
+    steps = st.number_input("Binomial Steps",       value=5,    min_value=1,   step=1)
 
-    # Main panel
-    if st.button("Calculate Option Price"):
-        if option_style == "Vanilla":
+    option_style = st.radio("Option Style", ("Vanilla", "Barrier"))
+    option_side  = st.selectbox("Option Side", ["call", "put"])
+
+    # Barrier-specific inputs
+    if option_style == "Barrier":
+        barrier_option_type = st.selectbox("Barrier Option Type", 
+            ["Up-and-Out", "Down-and-Out", "Up-and-In", "Down-and-In"])
+        H = st.number_input("Barrier Level (H)", value=110.0, min_value=0.0, step=1.0)
+        rebate = st.number_input("Rebate (if knocked out)", value=0.0, min_value=0.0, step=0.1)
+
+# Main panel
+if st.button("Calculate Option Price"):
+    colA, colB, colC = st.columns(3)
+    if option_style == "Vanilla":
+        with colA:
             price_binomial = european_binomial_option_price(
                 S0, K, r, q_div, T, sigma, steps, option_side
             )
-            st.write(f"**Vanilla {option_side.capitalize()} Option (Binomial) Price:** {price_binomial:.4f}")
-
+            #st.write(f"**Vanilla {option_side.capitalize()} Option (Binomial) Price:** {price_binomial:.4f}")
+            st.markdown(create_info_box(f"Vanilla {option_side.capitalize()} Option (Binomial) Price", f"${price_binomial:.4f}"), unsafe_allow_html=True)
+        with colB:
             # Compare with standard Black-Scholes
             bs_price = black_scholes(S0, K, T, r, sigma, option_side)
-            st.write(f"**Vanilla {option_side.capitalize()} Option (Analytical BS) Price:** {bs_price:.4f}")
+            #st.write(f"**Vanilla {option_side.capitalize()} Option (Analytical BS) Price:** {bs_price:.4f}")
+            st.markdown(create_info_box(f"Vanilla {option_side.capitalize()} Option (Analytical BS) Price", f"${bs_price:.4f}"), unsafe_allow_html=True)
+        with colC:
+            #st.write(f"**Difference (Binomial - BS):** {price_binomial - bs_price:.4e}")
+            st.markdown(create_info_box(f"Difference", f"{price_binomial - bs_price:.4f}"), unsafe_allow_html=True)
 
-            st.write(f"**Difference (Binomial - BS):** {price_binomial - bs_price:.4e}")
-
-        else:
-            # Barrier via Binomial
+    else:
+        # Barrier via Binomial
+        with colA:
             price_binomial = barrier_binomial_option_price(
                 S0, K, r, q_div, T, sigma, steps, barrier_option_type, H,
                 option_side, rebate
             )
-            st.write(f"**{barrier_option_type} {option_side.capitalize()} (Binomial) Price:** {price_binomial:.4f}")
+            #st.write(f"**{barrier_option_type} {option_side.capitalize()} (Binomial) Price:** {price_binomial:.4f}")
+            st.markdown(create_info_box(f"{barrier_option_type} {option_side.capitalize()} (Binomial) Price", f"${price_binomial:.4f}", ), unsafe_allow_html=True)
+        # Barrier via Closed-Form (if it applies)
+        # We'll combine the type: e.g. "Up-and-Out" + "call" -> "up-and-out call"
 
-            # Barrier via Closed-Form (if it applies)
-            # We'll combine the type: e.g. "Up-and-Out" + "call" -> "up-and-out call"
-            cf_type = combine_barrier_and_side(barrier_option_type, option_side)
-            price_analytic = barrier_option_price(S0, K, T, r, q_div, sigma, H, cf_type)
-            if price_analytic is not None:
-                st.write(f"**{barrier_option_type} {option_side.capitalize()} (Analytical) Price:** {price_analytic:.4f}")
-                st.write(f"**Difference (Binomial - Analytical):** {price_binomial - price_analytic:.4e}")
-            else:
-                st.warning("Analytical formula returned None for these parameters.")
+        cf_type = combine_barrier_and_side(barrier_option_type, option_side)
+        price_analytic = barrier_option_price(S0, K, T, r, q_div, sigma, H, cf_type)
+        if price_analytic is not None:
+            with colB:
+                #st.write(f"**{barrier_option_type} {option_side.capitalize()} (Analytical) Price:** {price_analytic:.4f}")
+                st.markdown(create_info_box(f"{barrier_option_type} {option_side.capitalize()} (Analytical) Price",  f"${price_analytic:.4f}"), unsafe_allow_html=True)
+            with colC:
+                #st.write(f"**Difference (Binomial - Analytical):** {price_binomial - price_analytic:.4e}")
+                st.markdown(create_info_box(f"Difference (Binomial - Analytical)", f"{price_binomial - price_analytic:.4f}"), unsafe_allow_html=True)
+        else:
+            st.warning("Analytical formula returned None for these parameters.")
 
-    # Plot the binomial tree (enhanced)
+# Plot the binomial tree (enhanced)
+col1, col2 = st.columns(2)
+with col1:
     st.subheader("Binomial Tree Visualization")
     if option_style == "Vanilla":
         fig = plot_binomial_tree_enhanced(S0, sigma, T, steps, barrier_level=None)
@@ -828,72 +921,229 @@ def main():
         fig = plot_binomial_tree_enhanced(S0, sigma, T, steps, barrier_level=H)
     st.plotly_chart(fig, use_container_width=True)
 
-    # Optional Error Analysis for Barrier Options
-    if option_style == "Barrier":
-        st.subheader("Error Analysis: Binomial vs. Analytical")
-        show_error = st.checkbox("Show error analysis (vary steps)")
-        if show_error:
-            # We'll compute the closed-form once
+# Optional Error Analysis for Barrier Options
+if option_style == "Barrier":
+
+    with col2:
+        # We'll compute the closed-form once
+        cf_type = combine_barrier_and_side(barrier_option_type, option_side)
+        analytic_price = barrier_option_price(S0, K, T, r, q_div, sigma, H, cf_type)
+
+        if analytic_price is None:
+            st.warning("No valid analytical price for these parameters.")
+        else:
+            max_steps_for_error = st.slider("Max steps for error analysis", 1, 400, 10)
+            data_points = []
+            for n in range(1, max_steps_for_error + 1):
+                b_price = barrier_binomial_option_price(
+                    S0, K, r, q_div, T, sigma, n, barrier_option_type, H, option_side, rebate
+                )
+                err = b_price - analytic_price
+                data_points.append({"Steps": n, "Binomial": b_price, "Error": err})
+
+            df_error = pd.DataFrame(data_points)
+
+            # Show table
+            #st.dataframe(df_error)
+
+            # Plot Binomial vs. Steps and Analytical
+            fig_conv = go.Figure()
+            fig_conv.add_trace(go.Scatter(
+                x=df_error["Steps"], y=df_error["Binomial"],
+                mode='lines+markers', name='Binomial Price'
+            ))
+            # Add a horizontal line for the analytical price
+            fig_conv.add_shape(type='line',
+                x0=1, x1=max_steps_for_error,
+                y0=analytic_price, y1=analytic_price,
+                line=dict(color='red', dash='dash'),
+            )
+            fig_conv.add_annotation(
+                x=max_steps_for_error,
+                y=analytic_price,
+                xanchor='left',
+                text=f"Analytical = {analytic_price:.4f}",
+                showarrow=False,
+                font=dict(color='red')
+            )
+            fig_conv.update_layout(
+                title="Convergence of Binomial Price to Analytical Price",
+                xaxis_title="Steps",
+                yaxis_title="Price",
+            )
+            st.plotly_chart(fig_conv, use_container_width=True)
+
+            # Plot the Error
+            # fig_err = go.Figure()
+            # fig_err.add_trace(go.Scatter(
+            #     x=df_error["Steps"], y=df_error["Error"],
+            #     mode='lines+markers', name='Error (Binomial - Analytical)'
+            # ))
+            # fig_err.update_layout(
+            #     title="Error vs. Number of Steps",
+            #     xaxis_title="Steps",
+            #     yaxis_title="Error"
+            # )
+            # st.plotly_chart(fig_err, use_container_width=True)
+
+# --- Multi-step Analysis Section ---
+st.subheader("Multi-step Analysis for Different Time Steps")
+
+# Input field for comma-separated values (e.g., "5,10,20,50,100")
+steps_input = st.text_input(
+    "Enter 5 values for the number of time steps (comma-separated):", 
+    "5,10,20,50,100"
+)
+
+# Parse the input into a list of integers
+try:
+    steps_list = [int(x.strip()) for x in steps_input.split(",") if x.strip().isdigit()]
+except Exception as e:
+    st.error("Please enter valid integer values separated by commas.")
+    steps_list = []
+
+# Check that exactly 5 values are provided
+if len(steps_list) != 5:
+    st.warning("Please enter exactly 5 time step values.")
+else:
+    results = []
+    
+    if option_style == "Vanilla":
+        # Compute the analytical price once using Black-Scholes.
+        analytic_price = black_scholes(S0, K, T, r, sigma, option_side)
+        for n in steps_list:
+            bin_price = european_binomial_option_price(S0, K, r, q_div, T, sigma, n, option_side)
+            error = bin_price - analytic_price
+            results.append({
+                "Steps": n, 
+                "Binomial Price": bin_price,
+                "Analytical Price": analytic_price,
+                "Error": error
+            })
+    else:
+        # For barrier options, obtain the closed-form type and price.
+        cf_type = combine_barrier_and_side(barrier_option_type, option_side)
+        analytic_price = barrier_option_price(S0, K, T, r, q_div, sigma, H, cf_type)
+        for n in steps_list:
+            bin_price = barrier_binomial_option_price(
+                S0, K, r, q_div, T, sigma, n, barrier_option_type, H, option_side, rebate
+            )
+            error = bin_price - analytic_price if analytic_price is not None else None
+            results.append({
+                "Steps": n, 
+                "Binomial Price": bin_price,
+                "Analytical Price": analytic_price if analytic_price is not None else np.nan,
+                "Error": error if error is not None else np.nan
+            })
+    
+    df_results = pd.DataFrame(results)
+    
+    # --- Create a styled Plotly Table ---
+    fig_table = go.Figure(data=[go.Table(
+        header=dict(
+            values=["<b>Steps</b>", "<b>Binomial Price</b>", "<b>Analytical Price</b>", "<b>Error</b>"],
+            fill_color='paleturquoise',
+            align='center',
+            font=dict(size=14)
+        ),
+        cells=dict(
+            values=[
+                df_results["Steps"],
+                df_results["Binomial Price"].map("{:.4f}".format),
+                df_results["Analytical Price"].map("{:.4f}".format),
+                df_results["Error"].map("{:.4f}".format)
+            ],
+            fill_color='lavender',
+            align='center',
+            font=dict(size=13)
+        )
+    )])
+    
+    # --- Create the Error vs. Time Steps Plot ---
+    fig_error = go.Figure()
+    fig_error.add_trace(go.Scatter(
+        x=df_results["Steps"],
+        y=df_results["Error"],
+        mode='lines+markers',
+        name='Error'
+    ))
+    fig_error.update_layout(
+        title="Error vs. Time Steps",
+        xaxis_title="Time Steps",
+        yaxis_title="Error",
+    )
+    
+    # --- Display Table and Plot Side by Side ---
+    col_table, col_plot = st.columns(2)
+    with col_table:
+        st.plotly_chart(fig_table, use_container_width=True)
+    with col_plot:
+        st.plotly_chart(fig_error, use_container_width=True)
+
+
+# Only proceed if we are dealing with a Barrier option
+if option_style == "Barrier":
+    # Ask user for inputs on how to vary S0 and how many steps to use
+    steps_for_error = st.number_input("Number of Binomial Steps for the Error Analysis:", value=50, min_value=1)
+    S0_min = st.number_input("Minimum S0", value=50.0, step=1.0)
+    S0_max = st.number_input("Maximum S0", value=150.0, step=1.0)
+    S0_step = st.number_input("Increment for S0", value=5.0, step=1.0)
+
+    # Button to generate the plot
+    if st.button("Plot Error vs. Stock Price"):
+        # Build an array of S0 values from S0_min to S0_max in increments of S0_step
+        S0_values = np.arange(S0_min, S0_max + S0_step, S0_step)
+
+        errors = []
+        # For each S0 in this range, compute binomial & analytical prices, then error
+        for s in S0_values:
+            bin_price = barrier_binomial_option_price(
+                s, K, r, q_div, T, sigma, steps_for_error,
+                barrier_option_type, H, option_side, rebate
+            )
+            # Convert barrier type + side to the correct analytical label
             cf_type = combine_barrier_and_side(barrier_option_type, option_side)
-            analytic_price = barrier_option_price(S0, K, T, r, q_div, sigma, H, cf_type)
-
-            if analytic_price is None:
-                st.warning("No valid analytical price for these parameters.")
+            an_price = barrier_option_price(s, K, T, r, q_div, sigma, H, cf_type)
+            
+            # If analytical formula returns None, we cannot compute an error
+            if an_price is not None:
+                err = bin_price - an_price
             else:
-                max_steps_for_error = st.slider("Max steps for error analysis", 1, 100, 10)
-                data_points = []
-                for n in range(1, max_steps_for_error + 1):
-                    b_price = barrier_binomial_option_price(
-                        S0, K, r, q_div, T, sigma, n, barrier_option_type, H, option_side, rebate
-                    )
-                    err = b_price - analytic_price
-                    data_points.append({"Steps": n, "Binomial": b_price, "Error": err})
+                err = np.nan  # or 0, or skip it entirely
+            
+            errors.append(err)
 
-                df_error = pd.DataFrame(data_points)
+        # Create the Plotly figure for Error vs. S0
+        fig_err_s0 = go.Figure()
+        fig_err_s0.add_trace(go.Scatter(
+            x=S0_values,
+            y=errors,
+            mode='lines+markers',
+            name='Error (Binomial - Analytical)'
+        ))
+        fig_err_s0.update_layout(
+            title="Error vs. Stock Price (S0)",
+            xaxis_title="Stock Price (S0)",
+            yaxis_title="Error",
+            template="simple_white"
+        )
 
-                # Show table
-                st.dataframe(df_error)
-
-                # Plot Binomial vs. Steps and Analytical
-                fig_conv = go.Figure()
-                fig_conv.add_trace(go.Scatter(
-                    x=df_error["Steps"], y=df_error["Binomial"],
-                    mode='lines+markers', name='Binomial Price'
-                ))
-                # Add a horizontal line for the analytical price
-                fig_conv.add_shape(type='line',
-                    x0=1, x1=max_steps_for_error,
-                    y0=analytic_price, y1=analytic_price,
-                    line=dict(color='red', dash='dash'),
-                )
-                fig_conv.add_annotation(
-                    x=max_steps_for_error,
-                    y=analytic_price,
-                    xanchor='left',
-                    text=f"Analytical = {analytic_price:.4f}",
-                    showarrow=False,
-                    font=dict(color='red')
-                )
-                fig_conv.update_layout(
-                    title="Convergence of Binomial Price to Analytical Price",
-                    xaxis_title="Steps",
-                    yaxis_title="Price",
-                )
-                st.plotly_chart(fig_conv, use_container_width=True)
-
-                # Plot the Error
-                fig_err = go.Figure()
-                fig_err.add_trace(go.Scatter(
-                    x=df_error["Steps"], y=df_error["Error"],
-                    mode='lines+markers', name='Error (Binomial - Analytical)'
-                ))
-                fig_err.update_layout(
-                    title="Error vs. Number of Steps",
-                    xaxis_title="Steps",
-                    yaxis_title="Error"
-                )
-                st.plotly_chart(fig_err, use_container_width=True)
+        # Display the figure in Streamlit
+        st.plotly_chart(fig_err_s0, use_container_width=True)
+        
+   
+else:
+    st.info("This section is only available for Barrier options.")
 
 
-if __name__ == "__main__":
-    main()
+if option_style == "Barrier":
+        st.subheader("Nonuniform (Adaptive) Mesh Pricing")
+        st.markdown("""
+        Instead of refining the time step, we can use a nonuniform asset–price grid.
+        The parameter \(\gamma\) controls how strongly nodes are clustered near the barrier.
+        \(\gamma > 1\) clusters more nodes near \(H\), increasing accuracy around the barrier.
+        """)
+        gamma = st.number_input("Clustering Parameter (\(\gamma\))", value=2.0, min_value=1.0, step=0.1)
+        if st.button("Calculate Nonuniform Price"):
+            price_nonuniform = nonuniform_barrier_binomial_price(S0, K, T, r, sigma, steps, H, option_side, gamma, rebate)
+            st.markdown(create_info_box("Nonuniform (Adaptive) Price", f"${price_nonuniform:.4f}"), unsafe_allow_html=True)
