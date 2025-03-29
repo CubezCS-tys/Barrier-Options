@@ -687,59 +687,7 @@ def barrier_binomial_option_price(S0, K, r, q_div, T, sigma, steps,
     return f(0, 0, False)
 
 
-def nonuniform_barrier_binomial_price(S0, K, T, r, sigma, N, barrier, option_type, gamma, rebate=0.0):
-    """
-    Computes the option price using a nonuniform binomial tree that clusters nodes near the barrier.
-    The asset price at node (i, j) is given by:
-      S(i,j) = barrier + (S0 - barrier) * (j/i)^(1/gamma)
-    for i = 1,...,N and j = 0,...,i.
-    
-    When gamma > 1, nodes are more densely clustered near the barrier.
-    
-    Note: This tree is non-recombining and is for demonstration purposes.
-    """
-    dt = T / N
-    discount = math.exp(-r * dt)
-    
-    # Initialize asset prices and option values at maturity.
-    # For i = N, we create N+1 nodes.
-    prices = []
-    values = []
-    for j in range(N+1):
-        if N > 0:
-            S_val = barrier + (S0 - barrier) * ((j / N) ** (1/gamma))
-        else:
-            S_val = S0
-        prices.append(S_val)
-        if option_type.lower() == "call":
-            payoff = max(S_val - K, 0)
-        else:
-            payoff = max(K - S_val, 0)
-        # If S falls below the barrier, use rebate.
-        if S_val <= barrier:
-            payoff = rebate
-        values.append(payoff)
-    
-    # Backward induction on the nonuniform tree.
-    # Note: Because the tree is non-recombining, the probability calculation is heuristic.
-    for i in range(N, 0, -1):
-        new_values = []
-        for j in range(i):
-            # For the parent node, recalculate the asset price.
-            if i-1 > 0:
-                S_parent = barrier + (S0 - barrier) * ((j / (i-1)) ** (1/gamma))
-            else:
-                S_parent = S0
-            # Use standard CRR probabilities with dt (as an approximation).
-            u = math.exp(sigma * math.sqrt(dt))
-            d = 1.0 / u
-            p = (math.exp(r * dt) - d) / (u - d)
-            value = discount * (p * values[j+1] + (1 - p) * values[j])
-            # For simplicity, we compute the weighted average:
-            value = discount * (p * values[j+1] + (1 - p) * values[j])
-            new_values.append(value)
-        values = new_values
-    return values[0]
+
 # -------------------------------
 # 3. Enhanced Binomial Tree Visualization
 # -------------------------------
@@ -1136,14 +1084,3 @@ else:
     st.info("This section is only available for Barrier options.")
 
 
-if option_style == "Barrier":
-        st.subheader("Nonuniform (Adaptive) Mesh Pricing")
-        st.markdown("""
-        Instead of refining the time step, we can use a nonuniform asset–price grid.
-        The parameter \(\gamma\) controls how strongly nodes are clustered near the barrier.
-        \(\gamma > 1\) clusters more nodes near \(H\), increasing accuracy around the barrier.
-        """)
-        gamma = st.number_input("Clustering Parameter (\(\gamma\))", value=2.0, min_value=1.0, step=0.1)
-        if st.button("Calculate Nonuniform Price"):
-            price_nonuniform = nonuniform_barrier_binomial_price(S0, K, T, r, sigma, steps, H, option_side, gamma, rebate)
-            st.markdown(create_info_box("Nonuniform (Adaptive) Price", f"${price_nonuniform:.4f}"), unsafe_allow_html=True)
