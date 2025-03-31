@@ -1457,8 +1457,8 @@ with col1:
 
 with col2:
     st.header("AMR Parameters")
-    coarse_steps = st.number_input("Coarse Steps", 10)
-    fine_steps = st.number_input("Fine Steps (around barrier)", 200)
+    coarse_steps = st.number_input("Coarse Steps", value = 20, min_value = 0)
+    fine_steps = st.number_input("Fine Steps (around barrier)", value = 400, min_value = 0)
     fine_region = st.slider("Fine Region Width (%) around Barrier", 0.01, 0.3, 0.1)
 
 if st.button("Calculate"):
@@ -1514,8 +1514,8 @@ if st.button("Generate Error Plot"):
         an_price = barrier_option_price(s, K, T, r, q, sigma, barrier, cf_type)
 
         if an_price is not None:
-            adaptive_err = adaptive_price - an_price
-            regular_err = regular_price - an_price
+            adaptive_err = np.abs(adaptive_price - an_price)
+            regular_err = np.abs(regular_price - an_price)
         else:
             adaptive_err = np.nan
             regular_err = np.nan

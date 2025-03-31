@@ -410,9 +410,12 @@ for S0 in spots:
     time_FE  = time.perf_counter() - t0
 
     err_FE = abs(FE_value - true_price)
+    err_FE_list = []
+    err_FE_list.append(err_FE)
     accuracy_FE = 0.0
     if true_price != 0:
         accuracy_FE = 100 * (1 - err_FE / true_price)
+        
 
     # -----------------------------------------------------
     #   3) Backward Euler (Implicit)
@@ -422,6 +425,8 @@ for S0 in spots:
     time_BE  = time.perf_counter() - t0
 
     err_BE = abs(BE_value - true_price)
+    err_BE_list = []
+    err_BE_list.append(err_BE)
     accuracy_BE = 0.0
     if true_price != 0:
         accuracy_BE = 100 * (1 - err_BE / true_price)
@@ -434,6 +439,8 @@ for S0 in spots:
     time_CN = time.perf_counter() - t0
 
     err_CN = abs(CN_value - true_price)
+    err_CN_list = []
+    err_CN_list.append(err_CN)
     accuracy_CN = 0.0
     if true_price != 0:
         accuracy_CN = 100 * (1 - err_CN / true_price)
@@ -458,6 +465,36 @@ for S0 in spots:
         #"CN Time (s)": f"{time_CN:.4f}",
     }
     rows.append(row)
+    
+    fig_err = go.Figure()
+    fig_err.add_trace(go.Scatter(
+        x = spots,
+        y = err_FE_list,
+        mode = 'lines+markers',
+        name = "Error FE"
+    ))
+    fig_err.add_trace(go.Scatter(
+        x = spots,
+        y = err_BE_list,
+        mode = 'lines+markers',
+        name = "Error BE"
+    ))
+    fig_err.add_trace(go.Scatter(
+        x = spots,
+        y = err_CN_list,
+        mode = 'lines+markers',
+        name = "Error CN"
+    ))
+    fig_err.update_layout(
+        title="Error vs. Stock Price (S0)",
+        xaxis_title="Stock Price (S0)",
+        yaxis_title="Error",
+        template="simple_white"
+    )
+
+    st.plotly_chart(fig_err, use_container_width=True)
+    
+
 
 # Once done, build a final DataFrame
 df = pd.DataFrame(rows)
@@ -475,3 +512,4 @@ df_styled = (
 
 # Then display it with st.dataframe:
 st.dataframe(df_styled)
+
