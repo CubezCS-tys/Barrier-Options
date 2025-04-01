@@ -717,7 +717,7 @@ if option_style == "Barrier":
             
             # If analytical formula returns None, we cannot compute an error
             if an_price is not None:
-                err = bin_price - an_price
+                err = np.abs(bin_price - an_price)
             else:
                 err = np.nan  # or 0, or skip it entirely
             

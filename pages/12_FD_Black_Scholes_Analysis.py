@@ -396,6 +396,9 @@ rows = []
 
 # Iterate over the requested spot prices
 spots = np.arange(S_min, S_max + 0.1, S_step)
+err_FE_list = []
+err_BE_list = []
+err_CN_list = []
 for S0 in spots:
     # -----------------------------------------------------
     #   1) True / Analytical Price
@@ -409,8 +412,8 @@ for S0 in spots:
     FE_value, S_grid_FE, FE_prices = forward_euler(S0, K, T, r, sigma, dS_explicit, dt_explicit, option_type)
     time_FE  = time.perf_counter() - t0
 
-    err_FE = abs(FE_value - true_price)
-    err_FE_list = []
+    err_FE = np.abs(FE_value - true_price)
+
     err_FE_list.append(err_FE)
     accuracy_FE = 0.0
     if true_price != 0:
@@ -424,8 +427,8 @@ for S0 in spots:
     BE_value, S_grid_BE, BE_prices = backward_euler(S0, K, r, T, sigma, dS_implicit, dt_implicit, option_type)
     time_BE  = time.perf_counter() - t0
 
-    err_BE = abs(BE_value - true_price)
-    err_BE_list = []
+    err_BE = np.abs(BE_value - true_price)
+
     err_BE_list.append(err_BE)
     accuracy_BE = 0.0
     if true_price != 0:
@@ -438,8 +441,8 @@ for S0 in spots:
     CN_value, S_grid_CN, CN_prices = crank_nicolson(S0, K, r, T, sigma, dS_CN, dt_CN, option_type)
     time_CN = time.perf_counter() - t0
 
-    err_CN = abs(CN_value - true_price)
-    err_CN_list = []
+    err_CN = np.abs(CN_value - true_price)
+
     err_CN_list.append(err_CN)
     accuracy_CN = 0.0
     if true_price != 0:
@@ -466,35 +469,8 @@ for S0 in spots:
     }
     rows.append(row)
     
-    fig_err = go.Figure()
-    fig_err.add_trace(go.Scatter(
-        x = spots,
-        y = err_FE_list,
-        mode = 'lines+markers',
-        name = "Error FE"
-    ))
-    fig_err.add_trace(go.Scatter(
-        x = spots,
-        y = err_BE_list,
-        mode = 'lines+markers',
-        name = "Error BE"
-    ))
-    fig_err.add_trace(go.Scatter(
-        x = spots,
-        y = err_CN_list,
-        mode = 'lines+markers',
-        name = "Error CN"
-    ))
-    fig_err.update_layout(
-        title="Error vs. Stock Price (S0)",
-        xaxis_title="Stock Price (S0)",
-        yaxis_title="Error",
-        template="simple_white"
-    )
-
-    st.plotly_chart(fig_err, use_container_width=True)
     
-
+    
 
 # Once done, build a final DataFrame
 df = pd.DataFrame(rows)
@@ -510,6 +486,343 @@ df_styled = (
       #.format("{:.4f}")  # Example format for numeric columns
 )
 
-# Then display it with st.dataframe:
-st.dataframe(df_styled)
+# # Then display it with st.dataframe:
+# st.dataframe(df_styled)
 
+# fig_err = go.Figure()
+# fig_err.add_trace(go.Scatter(
+#     x = spots,
+#     y = err_FE_list,
+#     mode = 'lines+markers',
+#     line=dict(shape='linear', width=2),
+#     marker=dict(size=6),
+#     name = "Error FE"
+# ))
+# fig_err.add_trace(go.Scatter(
+#     x = spots,
+#     y = err_BE_list,
+#     mode = 'lines+markers',
+#     line=dict(shape='linear', width=2),
+#     marker=dict(size=6),
+#     name = "Error BE"
+# ))
+# fig_err.add_trace(go.Scatter(
+#     x = spots,
+#     y = err_CN_list,
+#     mode = 'lines+markers',
+#     line=dict(shape='linear', width=2),
+#     marker=dict(size=6),
+#     name = "Error CN"
+# ))
+# fig_err.update_layout(
+#     title="Error vs. Stock Price (S0)",
+#     xaxis_title="Stock Price (S0)",
+#     yaxis_title="Error",
+#     template="simple_white"
+# )
+
+# st.plotly_chart(fig_err, use_container_width=True)
+
+# S_min, S_max, S_step = 70, 130, 2  # for spot variation
+# S0_fixed = 100                    # fixed spot for convergence tests
+
+# dS_values = [2, 1, 0.5, 0.25]     # for convergence/runtime plots
+# dt_values = [0.01] * len(dS_values)  # could make dt adaptive for stability
+# rows = []
+
+# # Lists for plots
+# err_FE_list, err_BE_list, err_CN_list = [], [], []
+# price_FE_list, price_BE_list, price_CN_list, price_true_list = [], [], [], []
+
+# # Runtime and convergence lists
+# ds_log, err_FE_conv, err_BE_conv, err_CN_conv = [], [], [], []
+# runtime_FE, runtime_BE, runtime_CN = [], [], []
+
+# # -------------------- Helper function (log error safely) --------------------
+# def safe_log_error(true_val, approx_val):
+#     err = np.abs(approx_val - true_val)
+#     return np.log10(err) if err != 0 else -15
+
+# # -------------------- 1. Error vs. Spot Price --------------------
+# for S0 in spots:
+#     true_price = black_scholes(S0, K, T, r, sigma, option_type)
+#     price_true_list.append(true_price)
+
+#     FE_t0 = time.perf_counter()
+#     FE_val, _, _ = forward_euler(S0, K, T, r, sigma, dS_explicit, dt_explicit, option_type)
+#     runtime_FE_val = time.perf_counter() - FE_t0
+#     err_FE = np.abs(FE_val - true_price)
+#     err_FE_list.append(err_FE)
+#     price_FE_list.append(FE_val)
+
+#     BE_t0 = time.perf_counter()
+#     BE_val, _, _ = backward_euler(S0, K, r, T, sigma, dS_implicit, dt_implicit, option_type)
+#     runtime_BE_val = time.perf_counter() - BE_t0
+#     err_BE = np.abs(BE_val - true_price)
+#     err_BE_list.append(err_BE)
+#     price_BE_list.append(BE_val)
+
+#     CN_t0 = time.perf_counter()
+#     CN_val, _, _ = crank_nicolson(S0, K, r, T, sigma, dS_CN, dt_CN, option_type)
+#     runtime_CN_val = time.perf_counter() - CN_t0
+#     err_CN = np.abs(CN_val - true_price)
+#     err_CN_list.append(err_CN)
+#     price_CN_list.append(CN_val)
+
+# # -------------------- 2. Convergence: Error vs dS --------------------
+# for dS, dt in zip(dS_values, dt_values):
+#     true_val = black_scholes(S0_fixed, K, T, r, sigma, option_type)
+
+#     t0 = time.perf_counter()
+#     FE_val, _, _ = forward_euler(S0_fixed, K, T, r, sigma, dS, dt, option_type)
+#     runtime_FE.append(time.perf_counter() - t0)
+#     err_FE_conv.append(np.abs(FE_val - true_val))
+
+#     t0 = time.perf_counter()
+#     BE_val, _, _ = backward_euler(S0_fixed, K, r, T, sigma, dS, dt, option_type)
+#     runtime_BE.append(time.perf_counter() - t0)
+#     err_BE_conv.append(np.abs(BE_val - true_val))
+
+#     t0 = time.perf_counter()
+#     CN_val, _, _ = crank_nicolson(S0_fixed, K, r, T, sigma, dS, dt, option_type)
+#     runtime_CN.append(time.perf_counter() - t0)
+#     err_CN_conv.append(np.abs(CN_val - true_val))
+
+#     ds_log.append(np.log10(dS))
+
+# # -------------------- Plotting --------------------
+
+# def plot_error_vs_spot():
+#     fig = go.Figure()
+#     fig.add_trace(go.Scatter(x=spots, y=err_FE_list, name="FE Error", mode='lines+markers'))
+#     fig.add_trace(go.Scatter(x=spots, y=err_BE_list, name="BE Error", mode='lines+markers'))
+#     fig.add_trace(go.Scatter(x=spots, y=err_CN_list, name="CN Error", mode='lines+markers'))
+#     fig.update_layout(title="Error vs. Spot Price (S0)", xaxis_title="Spot Price", yaxis_title="Error")
+#     st.plotly_chart(fig)
+
+# def plot_convergence():
+#     fig = go.Figure()
+#     fig.add_trace(go.Scatter(x=ds_log, y=np.log10(err_FE_conv), name="FE", mode='lines+markers'))
+#     fig.add_trace(go.Scatter(x=ds_log, y=np.log10(err_BE_conv), name="BE", mode='lines+markers'))
+#     fig.add_trace(go.Scatter(x=ds_log, y=np.log10(err_CN_conv), name="CN", mode='lines+markers'))
+#     fig.update_layout(title="Convergence Plot: log(Error) vs. log(dS)", xaxis_title="log(dS)", yaxis_title="log(Error)")
+#     st.plotly_chart(fig)
+
+# def plot_runtime_vs_grid():
+#     fig = go.Figure()
+#     fig.add_trace(go.Scatter(x=dS_values, y=runtime_FE, name="FE Runtime", mode='lines+markers'))
+#     fig.add_trace(go.Scatter(x=dS_values, y=runtime_BE, name="BE Runtime", mode='lines+markers'))
+#     fig.add_trace(go.Scatter(x=dS_values, y=runtime_CN, name="CN Runtime", mode='lines+markers'))
+#     fig.update_layout(title="Runtime vs. Grid Size (dS)", xaxis_title="dS", yaxis_title="Runtime (s)")
+#     st.plotly_chart(fig)
+
+# def plot_accuracy_vs_runtime():
+#     fig = go.Figure()
+#     fig.add_trace(go.Scatter(x=runtime_FE, y=[1/e for e in err_FE_conv], name="FE", mode='lines+markers'))
+#     fig.add_trace(go.Scatter(x=runtime_BE, y=[1/e for e in err_BE_conv], name="BE", mode='lines+markers'))
+#     fig.add_trace(go.Scatter(x=runtime_CN, y=[1/e for e in err_CN_conv], name="CN", mode='lines+markers'))
+#     fig.update_layout(title="Accuracy vs. Runtime", xaxis_title="Runtime (s)", yaxis_title="1 / Error")
+#     st.plotly_chart(fig)
+
+# def plot_price_vs_spot():
+#     fig = go.Figure()
+#     fig.add_trace(go.Scatter(x=spots, y=price_true_list, name="Black-Scholes", mode='lines'))
+#     fig.add_trace(go.Scatter(x=spots, y=price_FE_list, name="FE", mode='lines'))
+#     fig.add_trace(go.Scatter(x=spots, y=price_BE_list, name="BE", mode='lines'))
+#     fig.add_trace(go.Scatter(x=spots, y=price_CN_list, name="CN", mode='lines'))
+#     fig.update_layout(title="Option Price vs. Spot Price", xaxis_title="Spot Price", yaxis_title="Option Price")
+#     st.plotly_chart(fig)
+    
+# def plot_log_error_vs_dt():
+#     dt_range = [0.1, 0.05, 0.01, 0.005, 0.001]
+#     log_err_FE, log_err_BE, log_err_CN = [], [], []
+#     S0 = S0_fixed
+#     true_val = black_scholes(S0, K, T, r, sigma, option_type)
+    
+#     for dt in dt_range:
+#         err_FE = np.abs(forward_euler(S0, K, T, r, sigma, dS_explicit, dt, option_type)[0] - true_val)
+#         err_BE = np.abs(backward_euler(S0, K, r, T, sigma, dS_implicit, dt, option_type)[0] - true_val)
+#         err_CN = np.abs(crank_nicolson(S0, K, r, T, sigma, dS_CN, dt, option_type)[0] - true_val)
+#         log_err_FE.append(np.log10(err_FE))
+#         log_err_BE.append(np.log10(err_BE))
+#         log_err_CN.append(np.log10(err_CN))
+
+#     fig = go.Figure()
+#     fig.add_trace(go.Scatter(x=np.log10(dt_range), y=log_err_FE, name="FE", mode='lines+markers'))
+#     fig.add_trace(go.Scatter(x=np.log10(dt_range), y=log_err_BE, name="BE", mode='lines+markers'))
+#     fig.add_trace(go.Scatter(x=np.log10(dt_range), y=log_err_CN, name="CN", mode='lines+markers'))
+#     fig.update_layout(title="Log(Error) vs. log(dt)", xaxis_title="log(dt)", yaxis_title="log(Error)")
+#     st.plotly_chart(fig)
+
+# # -------------------- Display Tabs --------------------
+# tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Error vs Spot", "Convergence", "Runtime", "Accuracy vs Runtime", "Price vs Spot", "log(Error)-dt"])
+
+# with tab1:
+#     plot_error_vs_spot()
+# with tab2:
+#     plot_convergence()
+# with tab3:
+#     plot_runtime_vs_grid()
+# with tab4:
+#     plot_accuracy_vs_runtime()
+# with tab5:
+#     plot_price_vs_spot()
+# with tab6:
+#     plot_log_error_vs_dt()
+
+# ----------------- Sidebar Inputs -----------------
+
+dS_explicit = st.sidebar.number_input("ΔS for Explicit", value=1.0)
+dt_explicit = st.sidebar.number_input("Δt for Explicit", value=0.01)
+dS_implicit = st.sidebar.number_input("ΔS for Implicit", value=1.0)
+dt_implicit = st.sidebar.number_input("Δt for Implicit", value=0.01)
+dS_CN = st.sidebar.number_input("ΔS for CN", value=1.0)
+dt_CN = st.sidebar.number_input("Δt for CN", value=0.01)
+
+# ----------------- Grid Setup -----------------
+S_min, S_max, S_step = 80, 120, 2
+spots = np.arange(S_min, S_max + S_step, S_step)
+S0_fixed = 100
+
+dS_values = [2, 1, 0.5, 0.25]
+dt_values = [0.01] * len(dS_values)
+
+# ----------------- Storage Lists -----------------
+err_FE_list, err_BE_list, err_CN_list = [], [], []
+price_FE_list, price_BE_list, price_CN_list, price_true_list = [], [], [], []
+
+ds_log, err_FE_conv, err_BE_conv, err_CN_conv = [], [], [], []
+runtime_FE, runtime_BE, runtime_CN = [], [], []
+
+# ----------------- Helper Function -----------------
+def safe_log_error(true_val, approx_val):
+    err = np.abs(approx_val - true_val)
+    return np.log10(err) if err != 0 else -15
+
+# ----------------- 1. Error vs Spot -----------------
+for S0 in spots:
+    true_price = black_scholes(S0, K, T, r, sigma, option_type)
+    price_true_list.append(true_price)
+
+    FE_t0 = time.perf_counter()
+    FE_val, _, _ = forward_euler(S0, K, T, r, sigma, dS_explicit, dt_explicit, option_type)
+    runtime_FE_val = time.perf_counter() - FE_t0
+    err_FE = np.abs(FE_val - true_price)
+    err_FE_list.append(err_FE)
+    price_FE_list.append(FE_val)
+
+    BE_t0 = time.perf_counter()
+    BE_val, _, _ = backward_euler(S0, K, r, T, sigma, dS_implicit, dt_implicit, option_type)
+    runtime_BE_val = time.perf_counter() - BE_t0
+    err_BE = np.abs(BE_val - true_price)
+    err_BE_list.append(err_BE)
+    price_BE_list.append(BE_val)
+
+    CN_t0 = time.perf_counter()
+    CN_val, _, _ = crank_nicolson(S0, K, r, T, sigma, dS_CN, dt_CN, option_type)
+    runtime_CN_val = time.perf_counter() - CN_t0
+    err_CN = np.abs(CN_val - true_price)
+    err_CN_list.append(err_CN)
+    price_CN_list.append(CN_val)
+
+# ----------------- 2. Convergence: Error vs dS -----------------
+for dS, dt in zip(dS_values, dt_values):
+    true_val = black_scholes(S0_fixed, K, T, r, sigma, option_type)
+
+    t0 = time.perf_counter()
+    FE_val, _, _ = forward_euler(S0_fixed, K, T, r, sigma, dS, dt, option_type)
+    runtime_FE.append(time.perf_counter() - t0)
+    err_FE_conv.append(np.abs(FE_val - true_val))
+
+    t0 = time.perf_counter()
+    BE_val, _, _ = backward_euler(S0_fixed, K, r, T, sigma, dS, dt, option_type)
+    runtime_BE.append(time.perf_counter() - t0)
+    err_BE_conv.append(np.abs(BE_val - true_val))
+
+    t0 = time.perf_counter()
+    CN_val, _, _ = crank_nicolson(S0_fixed, K, r, T, sigma, dS, dt, option_type)
+    runtime_CN.append(time.perf_counter() - t0)
+    err_CN_conv.append(np.abs(CN_val - true_val))
+
+    ds_log.append(np.log10(dS))
+
+# ----------------- Plotting Functions -----------------
+def plot_error_vs_spot():
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=spots, y=err_FE_list, name="FE Error", mode='lines+markers'))
+    fig.add_trace(go.Scatter(x=spots, y=err_BE_list, name="BE Error", mode='lines+markers'))
+    fig.add_trace(go.Scatter(x=spots, y=err_CN_list, name="CN Error", mode='lines+markers'))
+    fig.update_layout(title="Error vs. Spot Price (S0)", xaxis_title="Spot Price", yaxis_title="Error")
+    st.plotly_chart(fig)
+
+def plot_convergence():
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=ds_log, y=np.log10(err_FE_conv), name="FE", mode='lines+markers'))
+    fig.add_trace(go.Scatter(x=ds_log, y=np.log10(err_BE_conv), name="BE", mode='lines+markers'))
+    fig.add_trace(go.Scatter(x=ds_log, y=np.log10(err_CN_conv), name="CN", mode='lines+markers'))
+    fig.update_layout(title="Convergence Plot: log(Error) vs. log(dS)", xaxis_title="log(dS)", yaxis_title="log(Error)")
+    st.plotly_chart(fig)
+
+def plot_runtime_vs_grid():
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=dS_values, y=runtime_FE, name="FE Runtime", mode='lines+markers'))
+    fig.add_trace(go.Scatter(x=dS_values, y=runtime_BE, name="BE Runtime", mode='lines+markers'))
+    fig.add_trace(go.Scatter(x=dS_values, y=runtime_CN, name="CN Runtime", mode='lines+markers'))
+    fig.update_layout(title="Runtime vs. Grid Size (dS)", xaxis_title="dS", yaxis_title="Runtime (s)")
+    st.plotly_chart(fig)
+
+def plot_accuracy_vs_runtime():
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=runtime_FE, y=[1/e for e in err_FE_conv], name="FE", mode='lines+markers'))
+    fig.add_trace(go.Scatter(x=runtime_BE, y=[1/e for e in err_BE_conv], name="BE", mode='lines+markers'))
+    fig.add_trace(go.Scatter(x=runtime_CN, y=[1/e for e in err_CN_conv], name="CN", mode='lines+markers'))
+    fig.update_layout(title="Accuracy vs. Runtime", xaxis_title="Runtime (s)", yaxis_title="1 / Error")
+    st.plotly_chart(fig)
+
+def plot_price_vs_spot():
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=spots, y=price_true_list, name="Black-Scholes", mode='lines'))
+    fig.add_trace(go.Scatter(x=spots, y=price_FE_list, name="FE", mode='lines'))
+    fig.add_trace(go.Scatter(x=spots, y=price_BE_list, name="BE", mode='lines'))
+    fig.add_trace(go.Scatter(x=spots, y=price_CN_list, name="CN", mode='lines'))
+    fig.update_layout(title="Option Price vs. Spot Price", xaxis_title="Spot Price", yaxis_title="Option Price")
+    st.plotly_chart(fig)
+
+def plot_log_error_vs_dt():
+    dt_range = [0.1, 0.05, 0.01, 0.005, 0.001]
+    log_err_FE, log_err_BE, log_err_CN = [], [], []
+    S0 = S0_fixed
+    true_val = black_scholes(S0, K, T, r, sigma, option_type)
+
+    for dt in dt_range:
+        err_FE = np.abs(forward_euler(S0, K, T, r, sigma, dS_explicit, dt, option_type)[0] - true_val)
+        err_BE = np.abs(backward_euler(S0, K, r, T, sigma, dS_implicit, dt, option_type)[0] - true_val)
+        err_CN = np.abs(crank_nicolson(S0, K, r, T, sigma, dS_CN, dt, option_type)[0] - true_val)
+        log_err_FE.append(np.log10(err_FE))
+        log_err_BE.append(np.log10(err_BE))
+        log_err_CN.append(np.log10(err_CN))
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=np.log10(dt_range), y=log_err_FE, name="FE", mode='lines+markers'))
+    fig.add_trace(go.Scatter(x=np.log10(dt_range), y=log_err_BE, name="BE", mode='lines+markers'))
+    fig.add_trace(go.Scatter(x=np.log10(dt_range), y=log_err_CN, name="CN", mode='lines+markers'))
+    fig.update_layout(title="Log(Error) vs. log(dt)", xaxis_title="log(dt)", yaxis_title="log(Error)")
+    st.plotly_chart(fig)
+
+# ----------------- Display Plots -----------------
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "Error vs Spot", "Convergence", "Runtime", "Accuracy vs Runtime", "Price vs Spot", "log(Error)-dt"
+])
+
+with tab1:
+    plot_error_vs_spot()
+with tab2:
+    plot_convergence()
+with tab3:
+    plot_runtime_vs_grid()
+with tab4:
+    plot_accuracy_vs_runtime()
+with tab5:
+    plot_price_vs_spot()
+with tab6:
+    plot_log_error_vs_dt()
