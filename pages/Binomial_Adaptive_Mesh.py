@@ -1470,10 +1470,16 @@ if st.button("Calculate"):
     regular_price = barrier_binomial_option_price(S0, K, r, q, T, sigma, coarse_steps, barrier_type.lower(), barrier, option_side, 0.0)
     regular_time = time.time() - start
 
+    cf_type = combine_barrier_and_side(barrier_type, option_side)
+    an_price = barrier_option_price(S0, K, T, r, q, sigma, barrier, cf_type)
+
+
+
     st.subheader("Results Comparison")
     st.write(f"Adaptive Binomial Price: **{adaptive_price:.4f}** (Time: {adaptive_time:.4f}s)")
     st.write(f"Regular Binomial Price: **{regular_price:.4f}** (Time: {regular_time:.4f}s)")
-    st.write(f"Difference (Adaptive - Regular): **{adaptive_price - regular_price:.4e}**")
+    #st.write(f"Difference (Adaptive - Regular): **{adaptive_price - regular_price:.4e}**")
+    st.write(f"Analytical Price: **{an_price:.4f}**")
 
     st.subheader("Interpretation")
     st.markdown("""
