@@ -1392,47 +1392,121 @@ def barrier_binomial_option_price(S0, K, r, q_div, T, sigma, steps,
     return f(0, 0, False)
 
 # Adaptive Mesh Refinement (AMR) Binomial
-def adaptive_barrier_binomial(S0, K, r, q, T, sigma, coarse_steps, fine_steps, barrier, barrier_option_type, option_side, rebate=0.0, fine_region=0.1):
-    critical_region = (barrier*(1-fine_region), barrier*(1+fine_region))
+# def adaptive_barrier_binomial(S0, K, r, q, T, sigma, coarse_steps, fine_steps, barrier, barrier_option_type, option_side, rebate=0.0, fine_region=0.1):
+#     critical_region = (barrier*(1-fine_region), barrier*(1+fine_region))
+#     dt_fine = T / fine_steps
+#     dt_coarse = T / coarse_steps
+
+#     u_fine = np.exp(sigma * np.sqrt(dt_fine))
+#     d_fine = 1/u_fine
+#     disc_fine = np.exp(-r * dt_fine)
+#     p_fine = (np.exp((r - q)*dt_fine) - d_fine) / (u_fine - d_fine)
+
+#     u_coarse = np.exp(sigma * np.sqrt(dt_coarse))
+#     d_coarse = 1/u_coarse
+#     disc_coarse = np.exp(-r * dt_coarse)
+#     p_coarse = (np.exp((r - q)*dt_coarse) - d_coarse) / (u_coarse - d_coarse)
+
+#     memo = {}
+#     def intrinsic(S):
+#         return max(S - K, 0) if option_side == 'call' else max(K - S, 0)
+
+#     def adaptive_f(S, t, bh):
+#         if t >= T:
+#             return rebate if ("out" in barrier_option_type and bh) else (intrinsic(S) if ("in" in barrier_option_type and bh) or ("out" in barrier_option_type and not bh) else 0)
+
+#         is_fine = critical_region[0] <= S <= critical_region[1]
+#         dt, u, d, disc, p = (dt_fine, u_fine, d_fine, disc_fine, p_fine) if is_fine else (dt_coarse, u_coarse, d_coarse, disc_coarse, p_coarse)
+
+#         barrier_hit = bh or (S >= barrier if "up" in barrier_option_type else S <= barrier)
+#         S_up, S_down = S*u, S*d
+
+#         key = (round(S,4), round(t,4), barrier_hit)
+#         if key in memo:
+#             return memo[key]
+
+#         val_up = adaptive_f(S_up, t+dt, barrier_hit)
+#         val_down = adaptive_f(S_down, t+dt, barrier_hit)
+#         val = disc * (p*val_up + (1-p)*val_down)
+
+#         memo[key] = val
+#         return val
+
+#     return adaptive_f(S0, 0, False)
+
+def adaptive_barrier_binomial(
+    S0, K, r, q, T, sigma,
+    coarse_steps, fine_steps,
+    barrier, barrier_option_type, option_side,
+    rebate=0.0, fine_region=0.1
+):
+    # Define critical region around the barrier for using fine steps
+    critical_region = (barrier * (1 - fine_region), barrier * (1 + fine_region))
+
+    # Default time steps
     dt_fine = T / fine_steps
     dt_coarse = T / coarse_steps
 
+    # Binomial params for fine grid
     u_fine = np.exp(sigma * np.sqrt(dt_fine))
-    d_fine = 1/u_fine
+    d_fine = 1 / u_fine
     disc_fine = np.exp(-r * dt_fine)
-    p_fine = (np.exp((r - q)*dt_fine) - d_fine) / (u_fine - d_fine)
+    p_fine = (np.exp((r - q) * dt_fine) - d_fine) / (u_fine - d_fine)
 
+    # Binomial params for coarse grid
     u_coarse = np.exp(sigma * np.sqrt(dt_coarse))
-    d_coarse = 1/u_coarse
+    d_coarse = 1 / u_coarse
     disc_coarse = np.exp(-r * dt_coarse)
-    p_coarse = (np.exp((r - q)*dt_coarse) - d_coarse) / (u_coarse - d_coarse)
+    p_coarse = (np.exp((r - q) * dt_coarse) - d_coarse) / (u_coarse - d_coarse)
 
     memo = {}
+
     def intrinsic(S):
         return max(S - K, 0) if option_side == 'call' else max(K - S, 0)
 
     def adaptive_f(S, t, bh):
+        # Base case: maturity reached
         if t >= T:
-            return rebate if ("out" in barrier_option_type and bh) else (intrinsic(S) if ("in" in barrier_option_type and bh) or ("out" in barrier_option_type and not bh) else 0)
+            if "out" in barrier_option_type:
+                return rebate if bh else intrinsic(S)
+            elif "in" in barrier_option_type:
+                return intrinsic(S) if bh else 0
+            else:
+                return intrinsic(S)
 
+        # Decide which time step to use (fine or coarse)
         is_fine = critical_region[0] <= S <= critical_region[1]
-        dt, u, d, disc, p = (dt_fine, u_fine, d_fine, disc_fine, p_fine) if is_fine else (dt_coarse, u_coarse, d_coarse, disc_coarse, p_coarse)
+        dt = dt_fine if is_fine else dt_coarse
 
+        # --- SNAP LOGIC: adjust dt if it overshoots maturity ---
+        if t + dt > T:
+            dt = T - t
+            u = np.exp(sigma * np.sqrt(dt))
+            d = 1 / u
+            disc = np.exp(-r * dt)
+            p = (np.exp((r - q) * dt) - d) / (u - d)
+        else:
+            u, d = (u_fine, d_fine) if is_fine else (u_coarse, d_coarse)
+            disc = disc_fine if is_fine else disc_coarse
+            p = p_fine if is_fine else p_coarse
+
+        # Update barrier hit status
         barrier_hit = bh or (S >= barrier if "up" in barrier_option_type else S <= barrier)
-        S_up, S_down = S*u, S*d
 
-        key = (round(S,4), round(t,4), barrier_hit)
+        S_up, S_down = S * u, S * d
+        key = (round(S, 4), round(t, 6), barrier_hit)
         if key in memo:
             return memo[key]
 
-        val_up = adaptive_f(S_up, t+dt, barrier_hit)
-        val_down = adaptive_f(S_down, t+dt, barrier_hit)
-        val = disc * (p*val_up + (1-p)*val_down)
+        val_up = adaptive_f(S_up, t + dt, barrier_hit)
+        val_down = adaptive_f(S_down, t + dt, barrier_hit)
+        val = disc * (p * val_up + (1 - p) * val_down)
 
         memo[key] = val
         return val
 
     return adaptive_f(S0, 0, False)
+
 
 # Helper to unify barrier type + side for the analytical function
 def combine_barrier_and_side(barrier_option_type, side):
