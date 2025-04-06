@@ -1268,7 +1268,7 @@ def app():
     dt_implicit = st.sidebar.number_input("dt (Implicit)", value=0.001, step=0.0001, format="%.6f")
     dS_implicit = st.sidebar.number_input("dS (Implicit)", value=0.5, step=0.1)
 
-    dt_CN       = st.sidebar.number_input("dt (Crank–Nicolson)", value=0.01, step=0.001, format="%.3f")
+    dt_CN       = st.sidebar.number_input("dt (Crank–Nicolson)", value=0.01, step=0.0001, format="%.3f")
     dS_CN       = st.sidebar.number_input("dS (Crank–Nicolson)", value=0.5, step=0.1)
 
     # Make a list to store table rows
@@ -1283,7 +1283,7 @@ def app():
         # -----------------------------------------------------
         #   1) True / Analytical Price
         # -----------------------------------------------------
-        true_price = max(barrier_option_price(S0, K, T, r, q, sigma, barrier, option_type), 0)
+        true_price = max(barrier_option_price(S0, K, T, r, q, sigma, barrier, option_type), 0.00000000001)
 
         # -----------------------------------------------------
         #   2) Forward Euler (Explicit)
@@ -1366,6 +1366,145 @@ def app():
     st.write(f"**RMSE (Forward Euler):** {rmse_FE:.6f}")
     st.write(f"**RMSE (Backward Euler):** {rmse_BE:.6f}")
     st.write(f"**RMSE (Crank–Nicolson):** {rmse_CN:.6f}")
+
+    # --- 1) Absolute Error vs Spot Price ---
+    st.markdown("### 1) Absolute Error vs Spot Price")
+
+    fig_err = go.Figure()
+
+    # Plot Forward Euler error
+    fig_err.add_trace(
+        go.Scatter(
+            x=spots,
+            y=err_FE_list,
+            mode='lines+markers',
+            name='Forward Euler'
+        )
+    )
+
+    # Plot Backward Euler error
+    fig_err.add_trace(
+        go.Scatter(
+            x=spots,
+            y=err_BE_list,
+            mode='lines+markers',
+            name='Backward Euler'
+        )
+    )
+
+    # Plot Crank–Nicolson error
+    fig_err.add_trace(
+        go.Scatter(
+            x=spots,
+            y=err_CN_list,
+            mode='lines+markers',
+            name='Crank–Nicolson'
+        )
+    )
+
+    fig_err.update_layout(
+        title="Absolute Error vs Spot Price",
+        xaxis_title="Spot Price (S₀)",
+        yaxis_title="Absolute Error",
+        legend_title="Method",
+        height=500
+    )
+    st.plotly_chart(fig_err, use_container_width=True)
+
+    # ----------------------------------------------------------------------------
+
+    st.markdown("### 2) Experimental Convergence Plot (RMSE vs dt)")
+
+    # You can adjust or extend dt_vals as you see fit
+    dt_vals = [0.1, 0.05, 0.02, 0.01, 0.005]
+    rmse_FE_dt, rmse_BE_dt, rmse_CN_dt = [], [], []
+
+    # For each dt, compute the RMSE across your chosen spot range
+    for dt in dt_vals:
+        err_FE_temp, err_BE_temp, err_CN_temp = [], [], []
+        for S0 in spots:
+            fe_val, _, _ = forward_euler(
+                S0, K, T, r, q, sigma, dS_explicit, dt, barrier, option_type
+            )
+            be_val, _, _ = backward_euler(
+                S0, K, T, r, q, sigma, dS_implicit, dt, barrier, option_type
+            )
+            cn_val, _, _ = crank_nicolson(
+                S0, K, T, r, q, sigma, dS_CN, dt, barrier, option_type
+            )
+            true_val = max(barrier_option_price(S0, K, T, r, q, sigma, barrier, option_type), 0)
+
+            err_FE_temp.append(abs(fe_val - true_val))
+            err_BE_temp.append(abs(be_val - true_val))
+            err_CN_temp.append(abs(cn_val - true_val))
+
+        rmse_FE_dt.append(np.sqrt(np.mean(np.square(err_FE_temp))))
+        rmse_BE_dt.append(np.sqrt(np.mean(np.square(err_BE_temp))))
+        rmse_CN_dt.append(np.sqrt(np.mean(np.square(err_CN_temp))))
+
+    fig_conv = go.Figure()
+
+    fig_conv.add_trace(
+        go.Scatter(
+            x=dt_vals, y=rmse_FE_dt,
+            mode='lines+markers', name='Forward Euler'
+        )
+    )
+    fig_conv.add_trace(
+        go.Scatter(
+            x=dt_vals, y=rmse_BE_dt,
+            mode='lines+markers', name='Backward Euler'
+        )
+    )
+    fig_conv.add_trace(
+        go.Scatter(
+            x=dt_vals, y=rmse_CN_dt,
+            mode='lines+markers', name='Crank–Nicolson'
+        )
+    )
+
+    fig_conv.update_layout(
+        title="RMSE vs Time Step (Convergence Plot)",
+        xaxis_type="log",    # Log scale for dt
+        yaxis_type="log",    # Log scale for RMSE
+        xaxis_title="Time Step (dt)",
+        yaxis_title="RMSE",
+        height=500
+    )
+
+    st.plotly_chart(fig_conv, use_container_width=True)
+
+    # ----------------------------------------------------------------------------
+
+    st.markdown("### 3) Accuracy vs Runtime Trade-off")
+
+    runtime_vals = [time_FE, time_BE, time_CN]
+    accuracy_vals = [accuracy_FE, accuracy_BE, accuracy_CN]
+    labels = ['Forward Euler', 'Backward Euler', 'Crank–Nicolson']
+
+    fig_runtime = go.Figure()
+
+    # We'll plot each method's (Runtime, Accuracy) as a single point with a label
+    for i in range(3):
+        fig_runtime.add_trace(
+            go.Scatter(
+                x=[runtime_vals[i]],
+                y=[accuracy_vals[i]],
+                mode='markers+text',
+                text=[labels[i]],
+                name=labels[i],
+                textposition='top center'
+            )
+        )
+
+    fig_runtime.update_layout(
+        title="Accuracy vs Runtime",
+        xaxis_title="Runtime (seconds)",
+        yaxis_title="Accuracy (%)",
+        height=500
+    )
+
+    st.plotly_chart(fig_runtime, use_container_width=True)
 
  
         
