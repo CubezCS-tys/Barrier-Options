@@ -2731,8 +2731,7 @@ def app():
         
 
         st.write(f"**PDE price at S0** = {priceSol:.4f}")
-        valb = barrier_option_price(s, K, T, r, q, sigma, barrier, option_type)
-        st.write(valb)
+        
 
         # 2) Evaluate the closed-form formula over the same S_grid
         #    for "down-and-in call"
