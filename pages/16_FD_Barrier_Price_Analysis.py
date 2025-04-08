@@ -1510,230 +1510,334 @@ def crank_nicolson(S0, K, T, r, q, sigma, dS, dt, barrier, option_type):
 #     st.plotly_chart(fig_runtime, use_container_width=True)
 #################################################################################################################################
 
+# def app():
+#     st.set_page_config(page_title="Numerical Scheme comparisons", layout="wide")
+#     st.title("Comparison of Forward/Backward/Crank–Nicolson Methods")
+
+#     # ============================
+#     # Sidebar for user inputs
+#     # ============================
+#     st.sidebar.header("Option & FD Parameters")
+#     option_type = st.sidebar.selectbox(
+#         "Option Type",
+#         [
+#             "down-and-in call",
+#             "down-and-out call",
+#             "down-and-in put",
+#             "down-and-out put",
+#             "up-and-in call",
+#             "up-and-out call",
+#             "up-and-in put",
+#             "up-and-out put",
+#         ],
+#     )
+#     K       = st.sidebar.number_input("Strike (K)", value=100.0, step=1.0)
+#     T       = st.sidebar.number_input("Maturity (T, in years)", value=1.0, step=0.1)
+#     r       = st.sidebar.number_input("Risk-free rate (r)", value=0.05, step=0.01)
+#     q       = st.sidebar.number_input("Dividend yield (q)", value=0.00, step=0.01)
+#     sigma   = st.sidebar.number_input("Volatility (sigma)", value=0.2, step=0.01)
+#     barrier = st.sidebar.number_input("Barrier Level", value=80.0, step=0.1)
+
+#     st.sidebar.header("Range of Spot Prices")
+#     S_min  = st.sidebar.number_input("Minimum Spot (S)", value=80.0, step=1.0)
+#     S_max  = st.sidebar.number_input("Maximum Spot (S)", value=120.0, step=1.0)
+#     S_step = st.sidebar.number_input("Spot increment", value=5.0, step=1.0)
+
+#     st.sidebar.header("FD Mesh Choices")
+#     # Possibly separate dt/dS for each scheme if you wish
+#     dt_explicit = st.sidebar.number_input("dt (Explicit)", value=0.0001, step=0.0001, format="%.6f")
+#     dS_explicit = st.sidebar.number_input("dS (Explicit)", value=1.0, step=0.1)
+
+#     dt_implicit = st.sidebar.number_input("dt (Implicit)", value=0.001, step=0.0001, format="%.6f")
+#     dS_implicit = st.sidebar.number_input("dS (Implicit)", value=0.5, step=0.1)
+
+#     dt_CN       = st.sidebar.number_input("dt (Crank–Nicolson)", value=0.01, step=0.0001, format="%.3f")
+#     dS_CN       = st.sidebar.number_input("dS (Crank–Nicolson)", value=0.5, step=0.1)
+
+#     # ============================
+#     # 1) Table of prices vs. "true" for multiple spots
+#     # ============================
+#     rows = []
+#     spots = np.arange(S_min, S_max + 0.1, S_step)
+
+#     for S0 in spots:
+#         # (A) True / Analytical Price (approx) for barrier
+#         #     If you have no closed-form, treat this as a "reference" from a high-accuracy PDE or known formula
+#         true_price = max(barrier_option_price(S0, K, T, r, q, sigma, barrier, option_type), 0.00000000001)
+
+#         # (B) Forward Euler (Explicit)
+#         t0 = time.perf_counter()
+#         FE_value, S_grid_FE, FE_prices = forward_euler(
+#             S0, K, T, r, q, sigma, dS_explicit, dt_explicit, barrier, option_type
+#         )
+#         time_FE = time.perf_counter() - t0
+#         err_FE = abs(FE_value - true_price)
+#         accuracy_FE = 100 * (1 - err_FE / true_price) if true_price != 0 else 0
+
+#         # (C) Backward Euler (Implicit)
+#         t0 = time.perf_counter()
+#         BE_value, S_grid_BE, BE_prices = backward_euler(
+#             S0, K, T, r, q, sigma, dS_implicit, dt_implicit, barrier, option_type
+#         )
+#         time_BE = time.perf_counter() - t0
+#         err_BE = abs(BE_value - true_price)
+#         accuracy_BE = 100 * (1 - err_BE / true_price) if true_price != 0 else 0
+
+#         # (D) Crank–Nicolson
+#         t0 = time.perf_counter()
+#         CN_value, S_grid_CN, CN_prices = crank_nicolson(
+#             S0, K, T, r, q, sigma, dS_CN, dt_CN, barrier, option_type
+#         )
+#         time_CN = time.perf_counter() - t0
+#         err_CN = abs(CN_value - true_price)
+#         accuracy_CN = 100 * (1 - err_CN / true_price) if true_price != 0 else 0
+
+#         # (E) Prepare row
+#         row = {
+#             "Spot": f"{S0:.2f}",
+#             "True Value": f"{true_price:.4f}",
+#             "Exp Value": f"{FE_value:.4f}",
+#             "Exp Accuracy": f"{accuracy_FE:.2f}%",
+#             "Imp Value": f"{BE_value:.4f}",
+#             "Imp Accuracy": f"{accuracy_BE:.2f}%",
+#             "CN Value": f"{CN_value:.4f}",
+#             "CN Accuracy": f"{accuracy_CN:.2f}%",
+#         }
+#         rows.append(row)
+
+#     df = pd.DataFrame(rows)
+#     st.subheader("1) Comparison of Three Finite‐Difference Methods vs. Reference")
+#     st.table(df)
+
+#     # ============================
+#     # 2) Basic Convergence Test
+#     # ============================
+#     with st.expander("Convergence & Runtime Analysis"):
+#         st.markdown("""
+#         **Goal**: Test how each scheme's accuracy and runtime behave as we refine the time-step \(\Delta t\).
+#         We'll fix a single spot \(S_0\) and compare:
+#         - Price error vs. \(\Delta t\)
+#         - CPU time vs. \(\Delta t\)
+#         """)
+
+#         # Let user pick a single S0 for the test
+#         test_spot = st.number_input("Spot for Convergence Test", value=100.0, step=1.0)
+
+#         # Range of dt values for each scheme
+#         st.write("Choose a range of dt values to test (logarithmic or linear).")
+#         dt_min = st.number_input("Min dt for test", value=0.0001, format="%.6f")
+#         dt_max = st.number_input("Max dt for test", value=0.01, format="%.6f")
+#         n_steps = st.number_input("Number of dt steps", value=5, min_value=2)
+
+#         if st.button("Run Convergence Test"):
+#             dt_values = np.linspace(dt_min, dt_max, n_steps)
+#             # We'll keep dS fixed for each scheme (use the user-chosen ones).
+#             # If you want to vary dS as well, you can do a nested loop.
+
+#             true_price_test = max(barrier_option_price(test_spot, K, T, r, q, sigma, barrier, option_type), 1e-12)
+#             results_FE = []
+#             results_BE = []
+#             results_CN = []
+
+#             for dt_val in dt_values:
+#                 # Forward Euler
+#                 start_FE = time.perf_counter()
+#                 FE_val, _, _ = forward_euler(test_spot, K, T, r, q, sigma, dS_explicit, dt_val, barrier, option_type)
+#                 cpu_FE = time.perf_counter() - start_FE
+#                 error_FE = abs(FE_val - true_price_test)
+
+#                 # Backward Euler
+#                 start_BE = time.perf_counter()
+#                 BE_val, _, _ = backward_euler(test_spot, K, T, r, q, sigma, dS_implicit, dt_val, barrier, option_type)
+#                 cpu_BE = time.perf_counter() - start_BE
+#                 error_BE = abs(BE_val - true_price_test)
+
+#                 # Crank–Nicolson
+#                 start_CN = time.perf_counter()
+#                 CN_val, _, _ = crank_nicolson(test_spot, K, T, r, q, sigma, dS_CN, dt_val, barrier, option_type)
+#                 cpu_CN = time.perf_counter() - start_CN
+#                 error_CN = abs(CN_val - true_price_test)
+
+#                 results_FE.append((dt_val, error_FE, cpu_FE))
+#                 results_BE.append((dt_val, error_BE, cpu_BE))
+#                 results_CN.append((dt_val, error_CN, cpu_CN))
+
+#             # Convert to DataFrame for display
+#             df_FE = pd.DataFrame(results_FE, columns=["dt", "Error", "CPU_Time"])
+#             df_BE = pd.DataFrame(results_BE, columns=["dt", "Error", "CPU_Time"])
+#             df_CN = pd.DataFrame(results_CN, columns=["dt", "Error", "CPU_Time"])
+
+#             st.write("**Forward Euler** results:")
+#             st.table(df_FE)
+#             st.write("**Backward Euler** results:")
+#             st.table(df_BE)
+#             st.write("**Crank–Nicolson** results:")
+#             st.table(df_CN)
+
+#             import plotly.graph_objects as go
+
+#             fig_err = go.Figure()
+
+#             fig_err.add_trace(go.Scatter(
+#                 x=df_FE["dt"], y=df_FE["Error"],
+#                 mode='lines+markers', name='Forward Euler'
+#             ))
+
+#             fig_err.add_trace(go.Scatter(
+#                 x=df_BE["dt"], y=df_BE["Error"],
+#                 mode='lines+markers', name='Backward Euler'
+#             ))
+
+#             fig_err.add_trace(go.Scatter(
+#                 x=df_CN["dt"], y=df_CN["Error"],
+#                 mode='lines+markers', name='Crank–Nicolson'
+#             ))
+
+#             fig_err.update_layout(
+#                 title=f"Error vs. dt (at S₀ = {test_spot:.2f})",
+#                 xaxis_title="Time Step (dt)",
+#                 yaxis_title="Absolute Error",
+#                 legend_title="Method",
+#                 xaxis_type="log",  # Optional: log scale for dt
+#                 yaxis_type="log",
+#                 height=500
+#             )
+
+#             st.plotly_chart(fig_err, use_container_width=True)
+            
+#             fig_time = go.Figure()
+
+#             fig_time.add_trace(go.Scatter(
+#                 x=df_FE["dt"], y=df_FE["CPU_Time"],
+#                 mode='lines+markers', name='Forward Euler'
+#             ))
+
+#             fig_time.add_trace(go.Scatter(
+#                 x=df_BE["dt"], y=df_BE["CPU_Time"],
+#                 mode='lines+markers', name='Backward Euler'
+#             ))
+
+#             fig_time.add_trace(go.Scatter(
+#                 x=df_CN["dt"], y=df_CN["CPU_Time"],
+#                 mode='lines+markers', name='Crank–Nicolson'
+#             ))
+
+#             fig_time.update_layout(
+#                 title=f"Runtime vs. dt (at S₀ = {test_spot:.2f})",
+#                 xaxis_title="Time Step (dt)",
+#                 yaxis_title="CPU Time (seconds)",
+#                 legend_title="Method",
+#                 xaxis_type="log",
+#                 height=500
+#             )
+
+#             st.plotly_chart(fig_time, use_container_width=True)
+
 def app():
     st.set_page_config(page_title="Numerical Scheme comparisons", layout="wide")
     st.title("Comparison of Forward/Backward/Crank–Nicolson Methods")
 
-    # ============================
-    # Sidebar for user inputs
-    # ============================
-    st.sidebar.header("Option & FD Parameters")
-    option_type = st.sidebar.selectbox(
-        "Option Type",
-        [
-            "down-and-in call",
-            "down-and-out call",
-            "down-and-in put",
-            "down-and-out put",
-            "up-and-in call",
-            "up-and-out call",
-            "up-and-in put",
-            "up-and-out put",
-        ],
-    )
-    K       = st.sidebar.number_input("Strike (K)", value=100.0, step=1.0)
-    T       = st.sidebar.number_input("Maturity (T, in years)", value=1.0, step=0.1)
-    r       = st.sidebar.number_input("Risk-free rate (r)", value=0.05, step=0.01)
-    q       = st.sidebar.number_input("Dividend yield (q)", value=0.00, step=0.01)
-    sigma   = st.sidebar.number_input("Volatility (sigma)", value=0.2, step=0.01)
-    barrier = st.sidebar.number_input("Barrier Level", value=80.0, step=0.1)
+    # ========== SIDEBAR INPUTS ==========
+    st.sidebar.header("Option & Finite Difference Parameters")
+    option_type = st.sidebar.selectbox("Option Type", [
+        "down-and-in call", "down-and-out call", "down-and-in put", "down-and-out put",
+        "up-and-in call", "up-and-out call", "up-and-in put", "up-and-out put"
+    ])
+    K = st.sidebar.number_input("Strike (K)", value=100.0)
+    T = st.sidebar.number_input("Maturity (T)", value=1.0)
+    r = st.sidebar.number_input("Risk-free Rate (r)", value=0.05)
+    q = st.sidebar.number_input("Dividend Yield (q)", value=0.0)
+    sigma = st.sidebar.number_input("Volatility (σ)", value=0.2)
+    barrier = st.sidebar.number_input("Barrier Level", value=80.0)
 
-    st.sidebar.header("Range of Spot Prices")
-    S_min  = st.sidebar.number_input("Minimum Spot (S)", value=80.0, step=1.0)
-    S_max  = st.sidebar.number_input("Maximum Spot (S)", value=120.0, step=1.0)
-    S_step = st.sidebar.number_input("Spot increment", value=5.0, step=1.0)
+    st.sidebar.header("Spot Range")
+    S_min = st.sidebar.number_input("Minimum Spot", value=80.0)
+    S_max = st.sidebar.number_input("Maximum Spot", value=120.0)
+    S_step = st.sidebar.number_input("Spot Step", value=5.0)
 
-    st.sidebar.header("FD Mesh Choices")
-    # Possibly separate dt/dS for each scheme if you wish
-    dt_explicit = st.sidebar.number_input("dt (Explicit)", value=0.0001, step=0.0001, format="%.6f")
-    dS_explicit = st.sidebar.number_input("dS (Explicit)", value=1.0, step=0.1)
+    st.sidebar.header("Finite Difference Mesh")
+    dt_explicit = st.sidebar.number_input("dt (Explicit)", value=0.0001, format="%.6f")
+    dS_explicit = st.sidebar.number_input("dS (Explicit)", value=1.0)
+    dt_implicit = st.sidebar.number_input("dt (Implicit)", value=0.001, format="%.6f")
+    dS_implicit = st.sidebar.number_input("dS (Implicit)", value=0.5)
+    dt_CN = st.sidebar.number_input("dt (Crank–Nicolson)", value=0.01, format="%.3f")
+    dS_CN = st.sidebar.number_input("dS (Crank–Nicolson)", value=0.5)
 
-    dt_implicit = st.sidebar.number_input("dt (Implicit)", value=0.001, step=0.0001, format="%.6f")
-    dS_implicit = st.sidebar.number_input("dS (Implicit)", value=0.5, step=0.1)
-
-    dt_CN       = st.sidebar.number_input("dt (Crank–Nicolson)", value=0.01, step=0.0001, format="%.3f")
-    dS_CN       = st.sidebar.number_input("dS (Crank–Nicolson)", value=0.5, step=0.1)
-
-    # ============================
-    # 1) Table of prices vs. "true" for multiple spots
-    # ============================
-    rows = []
-    spots = np.arange(S_min, S_max + 0.1, S_step)
+    # ========== PRICE COMPARISON TABLE ==========
+    st.subheader("1. Accuracy Table vs Analytical Value")
+    rows, spots = [], np.arange(S_min, S_max + 0.01, S_step)
 
     for S0 in spots:
-        # (A) True / Analytical Price (approx) for barrier
-        #     If you have no closed-form, treat this as a "reference" from a high-accuracy PDE or known formula
-        true_price = max(barrier_option_price(S0, K, T, r, q, sigma, barrier, option_type), 0.00000000001)
+        true_val = max(barrier_option_price(S0, K, T, r, q, sigma, barrier, option_type), 1e-12)
 
-        # (B) Forward Euler (Explicit)
-        t0 = time.perf_counter()
-        FE_value, S_grid_FE, FE_prices = forward_euler(
-            S0, K, T, r, q, sigma, dS_explicit, dt_explicit, barrier, option_type
-        )
-        time_FE = time.perf_counter() - t0
-        err_FE = abs(FE_value - true_price)
-        accuracy_FE = 100 * (1 - err_FE / true_price) if true_price != 0 else 0
+        FE, *_ = forward_euler(S0, K, T, r, q, sigma, dS_explicit, dt_explicit, barrier, option_type)
+        BE, *_ = backward_euler(S0, K, T, r, q, sigma, dS_implicit, dt_implicit, barrier, option_type)
+        CN, *_ = crank_nicolson(S0, K, T, r, q, sigma, dS_CN, dt_CN, barrier, option_type)
 
-        # (C) Backward Euler (Implicit)
-        t0 = time.perf_counter()
-        BE_value, S_grid_BE, BE_prices = backward_euler(
-            S0, K, T, r, q, sigma, dS_implicit, dt_implicit, barrier, option_type
-        )
-        time_BE = time.perf_counter() - t0
-        err_BE = abs(BE_value - true_price)
-        accuracy_BE = 100 * (1 - err_BE / true_price) if true_price != 0 else 0
-
-        # (D) Crank–Nicolson
-        t0 = time.perf_counter()
-        CN_value, S_grid_CN, CN_prices = crank_nicolson(
-            S0, K, T, r, q, sigma, dS_CN, dt_CN, barrier, option_type
-        )
-        time_CN = time.perf_counter() - t0
-        err_CN = abs(CN_value - true_price)
-        accuracy_CN = 100 * (1 - err_CN / true_price) if true_price != 0 else 0
-
-        # (E) Prepare row
         row = {
             "Spot": f"{S0:.2f}",
-            "True Value": f"{true_price:.4f}",
-            "Exp Value": f"{FE_value:.4f}",
-            "Exp Accuracy": f"{accuracy_FE:.2f}%",
-            "Imp Value": f"{BE_value:.4f}",
-            "Imp Accuracy": f"{accuracy_BE:.2f}%",
-            "CN Value": f"{CN_value:.4f}",
-            "CN Accuracy": f"{accuracy_CN:.2f}%",
+            "True Value": f"{true_val:.4f}",
+            "FE Value": f"{FE:.4f}", "FE Accuracy": f"{100 * (1 - abs(FE - true_val) / true_val):.2f}%",
+            "BE Value": f"{BE:.4f}", "BE Accuracy": f"{100 * (1 - abs(BE - true_val) / true_val):.2f}%",
+            "CN Value": f"{CN:.4f}", "CN Accuracy": f"{100 * (1 - abs(CN - true_val) / true_val):.2f}%",
         }
         rows.append(row)
 
-    df = pd.DataFrame(rows)
-    st.subheader("1) Comparison of Three Finite‐Difference Methods vs. Reference")
-    st.table(df)
+    st.table(pd.DataFrame(rows))
 
-    # ============================
-    # 2) Basic Convergence Test
-    # ============================
-    with st.expander("Convergence & Runtime Analysis"):
-        st.markdown("""
-        **Goal**: Test how each scheme's accuracy and runtime behave as we refine the time-step \(\Delta t\).
-        We'll fix a single spot \(S_0\) and compare:
-        - Price error vs. \(\Delta t\)
-        - CPU time vs. \(\Delta t\)
-        """)
-
-        # Let user pick a single S0 for the test
-        test_spot = st.number_input("Spot for Convergence Test", value=100.0, step=1.0)
-
-        # Range of dt values for each scheme
-        st.write("Choose a range of dt values to test (logarithmic or linear).")
-        dt_min = st.number_input("Min dt for test", value=0.0001, format="%.6f")
-        dt_max = st.number_input("Max dt for test", value=0.01, format="%.6f")
-        n_steps = st.number_input("Number of dt steps", value=5, min_value=2)
-
+    # ========== CONVERGENCE + RUNTIME TEST ==========
+    with st.expander("2. Convergence & Runtime Analysis"):
+        st.markdown("Test error and runtime for decreasing time steps.")
+        S0_test = st.number_input("Test Spot (S₀)", value=100.0)
+        dt_min = st.number_input("Minimum dt", value=0.0001, format="%.6f")
+        dt_max = st.number_input("Maximum dt", value=0.01, format="%.6f")
+        n_steps = st.number_input("Steps", min_value=2, value=6)
+        
         if st.button("Run Convergence Test"):
-            dt_values = np.linspace(dt_min, dt_max, n_steps)
-            # We'll keep dS fixed for each scheme (use the user-chosen ones).
-            # If you want to vary dS as well, you can do a nested loop.
+            dt_vals = np.logspace(np.log10(dt_min), np.log10(dt_max), n_steps)
+            errors_FE, errors_BE, errors_CN = [], [], []
+            times_FE, times_BE, times_CN = [], [], []
+            true_val = max(barrier_option_price(S0_test, K, T, r, q, sigma, barrier, option_type), 1e-12)
 
-            true_price_test = max(barrier_option_price(test_spot, K, T, r, q, sigma, barrier, option_type), 1e-12)
-            results_FE = []
-            results_BE = []
-            results_CN = []
+            for dt in dt_vals:
+                t0 = time.perf_counter()
+                fe, *_ = forward_euler(S0_test, K, T, r, q, sigma, dS_explicit, dt, barrier, option_type)
+                times_FE.append(time.perf_counter() - t0)
+                errors_FE.append(abs(fe - true_val))
 
-            for dt_val in dt_values:
-                # Forward Euler
-                start_FE = time.perf_counter()
-                FE_val, _, _ = forward_euler(test_spot, K, T, r, q, sigma, dS_explicit, dt_val, barrier, option_type)
-                cpu_FE = time.perf_counter() - start_FE
-                error_FE = abs(FE_val - true_price_test)
+                t0 = time.perf_counter()
+                be, *_ = backward_euler(S0_test, K, T, r, q, sigma, dS_implicit, dt, barrier, option_type)
+                times_BE.append(time.perf_counter() - t0)
+                errors_BE.append(abs(be - true_val))
 
-                # Backward Euler
-                start_BE = time.perf_counter()
-                BE_val, _, _ = backward_euler(test_spot, K, T, r, q, sigma, dS_implicit, dt_val, barrier, option_type)
-                cpu_BE = time.perf_counter() - start_BE
-                error_BE = abs(BE_val - true_price_test)
+                t0 = time.perf_counter()
+                cn, *_ = crank_nicolson(S0_test, K, T, r, q, sigma, dS_CN, dt, barrier, option_type)
+                times_CN.append(time.perf_counter() - t0)
+                errors_CN.append(abs(cn - true_val))
 
-                # Crank–Nicolson
-                start_CN = time.perf_counter()
-                CN_val, _, _ = crank_nicolson(test_spot, K, T, r, q, sigma, dS_CN, dt_val, barrier, option_type)
-                cpu_CN = time.perf_counter() - start_CN
-                error_CN = abs(CN_val - true_price_test)
-
-                results_FE.append((dt_val, error_FE, cpu_FE))
-                results_BE.append((dt_val, error_BE, cpu_BE))
-                results_CN.append((dt_val, error_CN, cpu_CN))
-
-            # Convert to DataFrame for display
-            df_FE = pd.DataFrame(results_FE, columns=["dt", "Error", "CPU_Time"])
-            df_BE = pd.DataFrame(results_BE, columns=["dt", "Error", "CPU_Time"])
-            df_CN = pd.DataFrame(results_CN, columns=["dt", "Error", "CPU_Time"])
-
-            st.write("**Forward Euler** results:")
-            st.table(df_FE)
-            st.write("**Backward Euler** results:")
-            st.table(df_BE)
-            st.write("**Crank–Nicolson** results:")
-            st.table(df_CN)
-
-            import plotly.graph_objects as go
-
+            # === Plot 1: Error vs dt (Log-Log)
             fig_err = go.Figure()
-
-            fig_err.add_trace(go.Scatter(
-                x=df_FE["dt"], y=df_FE["Error"],
-                mode='lines+markers', name='Forward Euler'
-            ))
-
-            fig_err.add_trace(go.Scatter(
-                x=df_BE["dt"], y=df_BE["Error"],
-                mode='lines+markers', name='Backward Euler'
-            ))
-
-            fig_err.add_trace(go.Scatter(
-                x=df_CN["dt"], y=df_CN["Error"],
-                mode='lines+markers', name='Crank–Nicolson'
-            ))
-
+            fig_err.add_trace(go.Scatter(x=dt_vals, y=errors_FE, mode='lines+markers', name="Forward Euler"))
+            fig_err.add_trace(go.Scatter(x=dt_vals, y=errors_BE, mode='lines+markers', name="Backward Euler"))
+            fig_err.add_trace(go.Scatter(x=dt_vals, y=errors_CN, mode='lines+markers', name="Crank–Nicolson"))
             fig_err.update_layout(
-                title=f"Error vs. dt (at S₀ = {test_spot:.2f})",
-                xaxis_title="Time Step (dt)",
-                yaxis_title="Absolute Error",
-                legend_title="Method",
-                xaxis_type="log",  # Optional: log scale for dt
-                yaxis_type="log",
-                height=500
+                title=f"Error vs dt (S₀ = {S0_test})", xaxis_type="log", yaxis_type="log",
+                xaxis_title="dt", yaxis_title="Absolute Error", height=500
             )
-
             st.plotly_chart(fig_err, use_container_width=True)
-            
+
+            # === Plot 2: Runtime vs dt
             fig_time = go.Figure()
-
-            fig_time.add_trace(go.Scatter(
-                x=df_FE["dt"], y=df_FE["CPU_Time"],
-                mode='lines+markers', name='Forward Euler'
-            ))
-
-            fig_time.add_trace(go.Scatter(
-                x=df_BE["dt"], y=df_BE["CPU_Time"],
-                mode='lines+markers', name='Backward Euler'
-            ))
-
-            fig_time.add_trace(go.Scatter(
-                x=df_CN["dt"], y=df_CN["CPU_Time"],
-                mode='lines+markers', name='Crank–Nicolson'
-            ))
-
+            fig_time.add_trace(go.Scatter(x=dt_vals, y=times_FE, mode='lines+markers', name="Forward Euler"))
+            fig_time.add_trace(go.Scatter(x=dt_vals, y=times_BE, mode='lines+markers', name="Backward Euler"))
+            fig_time.add_trace(go.Scatter(x=dt_vals, y=times_CN, mode='lines+markers', name="Crank–Nicolson"))
             fig_time.update_layout(
-                title=f"Runtime vs. dt (at S₀ = {test_spot:.2f})",
-                xaxis_title="Time Step (dt)",
-                yaxis_title="CPU Time (seconds)",
-                legend_title="Method",
-                xaxis_type="log",
-                height=500
+                title=f"Runtime vs dt (S₀ = {S0_test})", xaxis_type="log",
+                xaxis_title="dt", yaxis_title="CPU Time (s)", height=500
             )
-
             st.plotly_chart(fig_time, use_container_width=True)
 
-        
+
 if __name__ == "__main__":
     app()
 
