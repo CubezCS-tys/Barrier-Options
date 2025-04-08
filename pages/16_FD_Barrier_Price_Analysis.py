@@ -1206,160 +1206,160 @@ def crank_nicolson(S0, K, T, r, q, sigma, dS, dt, barrier, option_type):
 ################################################################################
 # 5) The Streamlit app
 ################################################################################
-def app():
-    # st.title("Barrier Options: PDE vs Analytical Barrier Formula")
+# def app():
+#     # st.title("Barrier Options: PDE vs Analytical Barrier Formula")
 
-    # # Sidebar inputs
-    # S0 = st.sidebar.number_input("Spot Price (S0)", value=100.0, step=1.0)
-    # K  = st.sidebar.number_input("Strike Price (K)", value=100.0, step=1.0)
-    # T  = st.sidebar.number_input("Time to Maturity (T)", value=1.0, step=0.00001)
-    # r  = st.sidebar.number_input("Risk-Free Rate (r)", value=0.05, step=0.01)
-    # q  = st.sidebar.number_input("Dividend Yield (q)", value=0.00, step=0.01)
-    # sigma = st.sidebar.number_input("Volatility (sigma)", value=0.2, step=0.01)
-    # barrier = st.sidebar.number_input("Barrier", value=80.0, step=1.0)
-    # dS = st.sidebar.number_input("Space Step (dS)", value=1.0, step=0.1)
-    # dt = st.sidebar.number_input("Time Step (dt)", value=0.001, step=0.001)
-    # option_type = st.sidebar.selectbox(
-    # "Option Type",
-    # [
-    #     "down-and-in call",
-    #     "down-and-out call",
-    #     "down-and-in put",
-    #     "down-and-out put",
-    #     "up-and-in call",
-    #     "up-and-out call",
-    #     "up-and-in put",
-    #     "up-and-out put",
-    # ])
+#     # # Sidebar inputs
+#     # S0 = st.sidebar.number_input("Spot Price (S0)", value=100.0, step=1.0)
+#     # K  = st.sidebar.number_input("Strike Price (K)", value=100.0, step=1.0)
+#     # T  = st.sidebar.number_input("Time to Maturity (T)", value=1.0, step=0.00001)
+#     # r  = st.sidebar.number_input("Risk-Free Rate (r)", value=0.05, step=0.01)
+#     # q  = st.sidebar.number_input("Dividend Yield (q)", value=0.00, step=0.01)
+#     # sigma = st.sidebar.number_input("Volatility (sigma)", value=0.2, step=0.01)
+#     # barrier = st.sidebar.number_input("Barrier", value=80.0, step=1.0)
+#     # dS = st.sidebar.number_input("Space Step (dS)", value=1.0, step=0.1)
+#     # dt = st.sidebar.number_input("Time Step (dt)", value=0.001, step=0.001)
+#     # option_type = st.sidebar.selectbox(
+#     # "Option Type",
+#     # [
+#     #     "down-and-in call",
+#     #     "down-and-out call",
+#     #     "down-and-in put",
+#     #     "down-and-out put",
+#     #     "up-and-in call",
+#     #     "up-and-out call",
+#     #     "up-and-in put",
+#     #     "up-and-out put",
+#     # ])
 
-    st.set_page_config(page_title="Numerical Scheme comparisons", layout="wide")
-    st.title("Comparison of Forward/Backward/Crank–Nicolson Methods")
+#     st.set_page_config(page_title="Numerical Scheme comparisons", layout="wide")
+#     st.title("Comparison of Forward/Backward/Crank–Nicolson Methods")
 
-    # Sidebar for user inputs
-    st.sidebar.header("Option & FD Parameters")
-    option_type = st.sidebar.selectbox(
-        "Option Type",
-    [
-        "down-and-in call",
-        "down-and-out call",
-        "down-and-in put",
-        "down-and-out put",
-        "up-and-in call",
-        "up-and-out call",
-        "up-and-in put",
-        "up-and-out put",
-    ])
-    K          = st.sidebar.number_input("Strike (K)", value=100.0, step=1.0)
-    T          = st.sidebar.number_input("Maturity (T, in years)", value=1.0, step=0.1)
-    r          = st.sidebar.number_input("Risk-free rate (r)", value=0.05, step=0.01)
-    q          = st.sidebar.number_input("Dividen-yield (q)", value=0.00, step=0.01)
-    sigma      = st.sidebar.number_input("Volatility (sigma)", value=0.2, step=0.01)
-    barrier    = st.sidebar.number_input("Barrier Level", value = 80.0, step = 0.1)
+#     # Sidebar for user inputs
+#     st.sidebar.header("Option & FD Parameters")
+#     option_type = st.sidebar.selectbox(
+#         "Option Type",
+#     [
+#         "down-and-in call",
+#         "down-and-out call",
+#         "down-and-in put",
+#         "down-and-out put",
+#         "up-and-in call",
+#         "up-and-out call",
+#         "up-and-in put",
+#         "up-and-out put",
+#     ])
+#     K          = st.sidebar.number_input("Strike (K)", value=100.0, step=1.0)
+#     T          = st.sidebar.number_input("Maturity (T, in years)", value=1.0, step=0.1)
+#     r          = st.sidebar.number_input("Risk-free rate (r)", value=0.05, step=0.01)
+#     q          = st.sidebar.number_input("Dividen-yield (q)", value=0.00, step=0.01)
+#     sigma      = st.sidebar.number_input("Volatility (sigma)", value=0.2, step=0.01)
+#     barrier    = st.sidebar.number_input("Barrier Level", value = 80.0, step = 0.1)
 
-    st.sidebar.header("Range of Spot Prices")
-    S_min      = st.sidebar.number_input("Minimum Spot (S)", value=80.0, step=1.0)
-    S_max      = st.sidebar.number_input("Maximum Spot (S)", value=120.0, step=1.0)
-    S_step     = st.sidebar.number_input("Spot increment", value=5.0, step=1.0)
+#     st.sidebar.header("Range of Spot Prices")
+#     S_min      = st.sidebar.number_input("Minimum Spot (S)", value=80.0, step=1.0)
+#     S_max      = st.sidebar.number_input("Maximum Spot (S)", value=120.0, step=1.0)
+#     S_step     = st.sidebar.number_input("Spot increment", value=5.0, step=1.0)
 
-    st.sidebar.header("FD Mesh Choices")
-    # Possibly separate dt/dS for each scheme if you wish
-    dt_explicit = st.sidebar.number_input("dt (Explicit)", value=0.0001, step=0.0001, format="%.6f")
-    dS_explicit = st.sidebar.number_input("dS (Explicit)", value=1.0, step=0.1)
+#     st.sidebar.header("FD Mesh Choices")
+#     # Possibly separate dt/dS for each scheme if you wish
+#     dt_explicit = st.sidebar.number_input("dt (Explicit)", value=0.0001, step=0.0001, format="%.6f")
+#     dS_explicit = st.sidebar.number_input("dS (Explicit)", value=1.0, step=0.1)
 
-    dt_implicit = st.sidebar.number_input("dt (Implicit)", value=0.0001, step=0.0001, format="%.6f")
-    dS_implicit = st.sidebar.number_input("dS (Implicit)", value=1.0, step=0.1)
+#     dt_implicit = st.sidebar.number_input("dt (Implicit)", value=0.0001, step=0.0001, format="%.6f")
+#     dS_implicit = st.sidebar.number_input("dS (Implicit)", value=1.0, step=0.1)
 
-    dt_CN       = st.sidebar.number_input("dt (Crank–Nicolson)", value=0.0001, step=0.0001, format="%.3f")
-    dS_CN       = st.sidebar.number_input("dS (Crank–Nicolson)", value=1.0, step=0.1)
+#     dt_CN       = st.sidebar.number_input("dt (Crank–Nicolson)", value=0.0001, step=0.0001, format="%.3f")
+#     dS_CN       = st.sidebar.number_input("dS (Crank–Nicolson)", value=1.0, step=0.1)
 
-    # Make a list to store table rows
-    rows = []
+#     # Make a list to store table rows
+#     rows = []
 
-    # Iterate over the requested spot prices
-    spots = np.arange(S_min, S_max + 0.1, S_step)
-    err_FE_list = []
-    err_BE_list = []
-    err_CN_list = []
-    if st.button("Run Scheme Comparison"):
-        for S0 in spots:
-            # -----------------------------------------------------
-            #   1) True / Analytical Price
-            # -----------------------------------------------------
-            true_price = max(barrier_option_price(S0, K, T, r, q, sigma, barrier, option_type), 0.00000000001)
+#     # Iterate over the requested spot prices
+#     spots = np.arange(S_min, S_max + 0.1, S_step)
+#     err_FE_list = []
+#     err_BE_list = []
+#     err_CN_list = []
+#     if st.button("Run Scheme Comparison"):
+#         for S0 in spots:
+#             # -----------------------------------------------------
+#             #   1) True / Analytical Price
+#             # -----------------------------------------------------
+#             true_price = max(barrier_option_price(S0, K, T, r, q, sigma, barrier, option_type), 0.00000000001)
 
-            # -----------------------------------------------------
-            #   2) Forward Euler (Explicit)
-            # -----------------------------------------------------
-            t0 = time.perf_counter()
-            FE_value, S_grid_FE, FE_prices = forward_euler(S0, K, T, r, q, sigma, dS_explicit, dt_explicit, barrier, option_type)
+#             # -----------------------------------------------------
+#             #   2) Forward Euler (Explicit)
+#             # -----------------------------------------------------
+#             t0 = time.perf_counter()
+#             FE_value, S_grid_FE, FE_prices = forward_euler(S0, K, T, r, q, sigma, dS_explicit, dt_explicit, barrier, option_type)
                                              
-            time_FE  = time.perf_counter() - t0
+#             time_FE  = time.perf_counter() - t0
 
-            err_FE = np.abs(FE_value - true_price)
+#             err_FE = np.abs(FE_value - true_price)
 
-            err_FE_list.append(err_FE)
-            accuracy_FE = 0.0
-            if true_price != 0:
-                accuracy_FE = 100 * (1 - (err_FE / true_price))
+#             err_FE_list.append(err_FE)
+#             accuracy_FE = 0.0
+#             if true_price != 0:
+#                 accuracy_FE = 100 * (1 - (err_FE / true_price))
                 
 
-            # -----------------------------------------------------
-            #   3) Backward Euler (Implicit)
-            # -----------------------------------------------------
-            t0 = time.perf_counter()
-            BE_value, S_grid_BE, BE_prices = backward_euler(S0, K, T, r, q, sigma, dS_implicit, dt_implicit, barrier, option_type)
-            time_BE  = time.perf_counter() - t0
+#             # -----------------------------------------------------
+#             #   3) Backward Euler (Implicit)
+#             # -----------------------------------------------------
+#             t0 = time.perf_counter()
+#             BE_value, S_grid_BE, BE_prices = backward_euler(S0, K, T, r, q, sigma, dS_implicit, dt_implicit, barrier, option_type)
+#             time_BE  = time.perf_counter() - t0
 
-            err_BE = np.abs(BE_value - true_price)
+#             err_BE = np.abs(BE_value - true_price)
 
-            err_BE_list.append(err_BE)
-            accuracy_BE = 0.0
-            if true_price != 0:
-                accuracy_BE = 100 * (1 - (err_BE / true_price))
+#             err_BE_list.append(err_BE)
+#             accuracy_BE = 0.0
+#             if true_price != 0:
+#                 accuracy_BE = 100 * (1 - (err_BE / true_price))
 
-            # -----------------------------------------------------
-            #   4) Crank–Nicolson
-            # -----------------------------------------------------
-            t0 = time.perf_counter()
-            CN_value, S_grid_CN, CN_prices = crank_nicolson(S0, K, T, r, q, sigma, dS_CN, dt_CN, barrier, option_type)
-            time_CN = time.perf_counter() - t0
+#             # -----------------------------------------------------
+#             #   4) Crank–Nicolson
+#             # -----------------------------------------------------
+#             t0 = time.perf_counter()
+#             CN_value, S_grid_CN, CN_prices = crank_nicolson(S0, K, T, r, q, sigma, dS_CN, dt_CN, barrier, option_type)
+#             time_CN = time.perf_counter() - t0
 
-            err_CN = np.abs(CN_value - true_price)
+#             err_CN = np.abs(CN_value - true_price)
 
-            err_CN_list.append(err_CN)
-            accuracy_CN = 0.0
-            if true_price != 0:
-                accuracy_CN = 100 * (1 - (err_CN / true_price))
+#             err_CN_list.append(err_CN)
+#             accuracy_CN = 0.0
+#             if true_price != 0:
+#                 accuracy_CN = 100 * (1 - (err_CN / true_price))
 
-            # -----------------------------------------------------
-            #   5) Prepare row
-            # -----------------------------------------------------
-            row = {
-                "Spot": f"{S0:.2f}",
-                "True Value": f"{true_price:.4f}",
+#             # -----------------------------------------------------
+#             #   5) Prepare row
+#             # -----------------------------------------------------
+#             row = {
+#                 "Spot": f"{S0:.2f}",
+#                 "True Value": f"{true_price:.4f}",
                 
-                "Exp Value": f"{FE_value:.4f}",
-                "Exp Accuracy": f"{accuracy_FE:.2f}%",
-                #"Exp Time (s)": f"{time_FE:.4f}",
+#                 "Exp Value": f"{FE_value:.4f}",
+#                 "Exp Accuracy": f"{accuracy_FE:.2f}%",
+#                 #"Exp Time (s)": f"{time_FE:.4f}",
                 
-                "Imp Value": f"{BE_value:.4f}",
-                "Imp Accuracy": f"{accuracy_BE:.2f}%",
-                #"Imp Time (s)": f"{time_BE:.4f}",
+#                 "Imp Value": f"{BE_value:.4f}",
+#                 "Imp Accuracy": f"{accuracy_BE:.2f}%",
+#                 #"Imp Time (s)": f"{time_BE:.4f}",
                 
-                "CN Value": f"{CN_value:.4f}",
-                "CN Accuracy": f"{accuracy_CN:.2f}%",
-                #"CN Time (s)": f"{time_CN:.4f}",
-            }
-            rows.append(row)
+#                 "CN Value": f"{CN_value:.4f}",
+#                 "CN Accuracy": f"{accuracy_CN:.2f}%",
+#                 #"CN Time (s)": f"{time_CN:.4f}",
+#             }
+#             rows.append(row)
             
             
             
 
-        # Once done, build a final DataFrame
-        df = pd.DataFrame(rows)
+#         # Once done, build a final DataFrame
+#         df = pd.DataFrame(rows)
 
-        st.subheader("Comparison of Three Finite‐Difference Methods vs. Black–Scholes")
-        st.table(df)
+#         st.subheader("Comparison of Three Finite‐Difference Methods vs. Black–Scholes")
+#         st.table(df)
 
 #     rmse_FE = np.sqrt(np.mean(np.square(err_FE_list)))
 #     rmse_BE = np.sqrt(np.mean(np.square(err_BE_list)))
@@ -1510,191 +1510,191 @@ def app():
 #     st.plotly_chart(fig_runtime, use_container_width=True)
 #################################################################################################################################
 
-# def app():
-#     st.set_page_config(page_title="Numerical Scheme comparisons", layout="wide")
-#     st.title("Comparison of Forward/Backward/Crank–Nicolson Methods")
+def app():
+    st.set_page_config(page_title="Numerical Scheme comparisons", layout="wide")
+    st.title("Comparison of Forward/Backward/Crank–Nicolson Methods")
 
-#     # ============================
-#     # Sidebar for user inputs
-#     # ============================
-#     st.sidebar.header("Option & FD Parameters")
-#     option_type = st.sidebar.selectbox(
-#         "Option Type",
-#         [
-#             "down-and-in call",
-#             "down-and-out call",
-#             "down-and-in put",
-#             "down-and-out put",
-#             "up-and-in call",
-#             "up-and-out call",
-#             "up-and-in put",
-#             "up-and-out put",
-#         ],
-#     )
-#     K       = st.sidebar.number_input("Strike (K)", value=100.0, step=1.0)
-#     T       = st.sidebar.number_input("Maturity (T, in years)", value=1.0, step=0.1)
-#     r       = st.sidebar.number_input("Risk-free rate (r)", value=0.05, step=0.01)
-#     q       = st.sidebar.number_input("Dividend yield (q)", value=0.00, step=0.01)
-#     sigma   = st.sidebar.number_input("Volatility (sigma)", value=0.2, step=0.01)
-#     barrier = st.sidebar.number_input("Barrier Level", value=80.0, step=0.1)
+    # ============================
+    # Sidebar for user inputs
+    # ============================
+    st.sidebar.header("Option & FD Parameters")
+    option_type = st.sidebar.selectbox(
+        "Option Type",
+        [
+            "down-and-in call",
+            "down-and-out call",
+            "down-and-in put",
+            "down-and-out put",
+            "up-and-in call",
+            "up-and-out call",
+            "up-and-in put",
+            "up-and-out put",
+        ],
+    )
+    K       = st.sidebar.number_input("Strike (K)", value=100.0, step=1.0)
+    T       = st.sidebar.number_input("Maturity (T, in years)", value=1.0, step=0.1)
+    r       = st.sidebar.number_input("Risk-free rate (r)", value=0.05, step=0.01)
+    q       = st.sidebar.number_input("Dividend yield (q)", value=0.00, step=0.01)
+    sigma   = st.sidebar.number_input("Volatility (sigma)", value=0.2, step=0.01)
+    barrier = st.sidebar.number_input("Barrier Level", value=80.0, step=0.1)
 
-#     st.sidebar.header("Range of Spot Prices")
-#     S_min  = st.sidebar.number_input("Minimum Spot (S)", value=80.0, step=1.0)
-#     S_max  = st.sidebar.number_input("Maximum Spot (S)", value=120.0, step=1.0)
-#     S_step = st.sidebar.number_input("Spot increment", value=5.0, step=1.0)
+    st.sidebar.header("Range of Spot Prices")
+    S_min  = st.sidebar.number_input("Minimum Spot (S)", value=80.0, step=1.0)
+    S_max  = st.sidebar.number_input("Maximum Spot (S)", value=120.0, step=1.0)
+    S_step = st.sidebar.number_input("Spot increment", value=5.0, step=1.0)
 
-#     st.sidebar.header("FD Mesh Choices")
-#     # Possibly separate dt/dS for each scheme if you wish
-#     dt_explicit = st.sidebar.number_input("dt (Explicit)", value=0.0001, step=0.0001, format="%.6f")
-#     dS_explicit = st.sidebar.number_input("dS (Explicit)", value=1.0, step=0.1)
+    st.sidebar.header("FD Mesh Choices")
+    # Possibly separate dt/dS for each scheme if you wish
+    dt_explicit = st.sidebar.number_input("dt (Explicit)", value=0.0001, step=0.0001, format="%.6f")
+    dS_explicit = st.sidebar.number_input("dS (Explicit)", value=1.0, step=0.1)
 
-#     dt_implicit = st.sidebar.number_input("dt (Implicit)", value=0.001, step=0.0001, format="%.6f")
-#     dS_implicit = st.sidebar.number_input("dS (Implicit)", value=0.5, step=0.1)
+    dt_implicit = st.sidebar.number_input("dt (Implicit)", value=0.001, step=0.0001, format="%.6f")
+    dS_implicit = st.sidebar.number_input("dS (Implicit)", value=0.5, step=0.1)
 
-#     dt_CN       = st.sidebar.number_input("dt (Crank–Nicolson)", value=0.01, step=0.0001, format="%.3f")
-#     dS_CN       = st.sidebar.number_input("dS (Crank–Nicolson)", value=0.5, step=0.1)
+    dt_CN       = st.sidebar.number_input("dt (Crank–Nicolson)", value=0.01, step=0.0001, format="%.3f")
+    dS_CN       = st.sidebar.number_input("dS (Crank–Nicolson)", value=0.5, step=0.1)
 
-#     # ============================
-#     # 1) Table of prices vs. "true" for multiple spots
-#     # ============================
-#     rows = []
-#     spots = np.arange(S_min, S_max + 0.1, S_step)
+    # ============================
+    # 1) Table of prices vs. "true" for multiple spots
+    # ============================
+    rows = []
+    spots = np.arange(S_min, S_max + 0.1, S_step)
 
-#     for S0 in spots:
-#         # (A) True / Analytical Price (approx) for barrier
-#         #     If you have no closed-form, treat this as a "reference" from a high-accuracy PDE or known formula
-#         true_price = max(barrier_option_price(S0, K, T, r, q, sigma, barrier, option_type), 0.00000000001)
+    for S0 in spots:
+        # (A) True / Analytical Price (approx) for barrier
+        #     If you have no closed-form, treat this as a "reference" from a high-accuracy PDE or known formula
+        true_price = max(barrier_option_price(S0, K, T, r, q, sigma, barrier, option_type), 0.00000000001)
 
-#         # (B) Forward Euler (Explicit)
-#         t0 = time.perf_counter()
-#         FE_value, S_grid_FE, FE_prices = forward_euler(
-#             S0, K, T, r, q, sigma, dS_explicit, dt_explicit, barrier, option_type
-#         )
-#         time_FE = time.perf_counter() - t0
-#         err_FE = abs(FE_value - true_price)
-#         accuracy_FE = 100 * (1 - err_FE / true_price) if true_price != 0 else 0
+        # (B) Forward Euler (Explicit)
+        t0 = time.perf_counter()
+        FE_value, S_grid_FE, FE_prices = forward_euler(
+            S0, K, T, r, q, sigma, dS_explicit, dt_explicit, barrier, option_type
+        )
+        time_FE = time.perf_counter() - t0
+        err_FE = abs(FE_value - true_price)
+        accuracy_FE = 100 * (1 - err_FE / true_price) if true_price != 0 else 0
 
-#         # (C) Backward Euler (Implicit)
-#         t0 = time.perf_counter()
-#         BE_value, S_grid_BE, BE_prices = backward_euler(
-#             S0, K, T, r, q, sigma, dS_implicit, dt_implicit, barrier, option_type
-#         )
-#         time_BE = time.perf_counter() - t0
-#         err_BE = abs(BE_value - true_price)
-#         accuracy_BE = 100 * (1 - err_BE / true_price) if true_price != 0 else 0
+        # (C) Backward Euler (Implicit)
+        t0 = time.perf_counter()
+        BE_value, S_grid_BE, BE_prices = backward_euler(
+            S0, K, T, r, q, sigma, dS_implicit, dt_implicit, barrier, option_type
+        )
+        time_BE = time.perf_counter() - t0
+        err_BE = abs(BE_value - true_price)
+        accuracy_BE = 100 * (1 - err_BE / true_price) if true_price != 0 else 0
 
-#         # (D) Crank–Nicolson
-#         t0 = time.perf_counter()
-#         CN_value, S_grid_CN, CN_prices = crank_nicolson(
-#             S0, K, T, r, q, sigma, dS_CN, dt_CN, barrier, option_type
-#         )
-#         time_CN = time.perf_counter() - t0
-#         err_CN = abs(CN_value - true_price)
-#         accuracy_CN = 100 * (1 - err_CN / true_price) if true_price != 0 else 0
+        # (D) Crank–Nicolson
+        t0 = time.perf_counter()
+        CN_value, S_grid_CN, CN_prices = crank_nicolson(
+            S0, K, T, r, q, sigma, dS_CN, dt_CN, barrier, option_type
+        )
+        time_CN = time.perf_counter() - t0
+        err_CN = abs(CN_value - true_price)
+        accuracy_CN = 100 * (1 - err_CN / true_price) if true_price != 0 else 0
 
-#         # (E) Prepare row
-#         row = {
-#             "Spot": f"{S0:.2f}",
-#             "True Value": f"{true_price:.4f}",
-#             "Exp Value": f"{FE_value:.4f}",
-#             "Exp Accuracy": f"{accuracy_FE:.2f}%",
-#             "Imp Value": f"{BE_value:.4f}",
-#             "Imp Accuracy": f"{accuracy_BE:.2f}%",
-#             "CN Value": f"{CN_value:.4f}",
-#             "CN Accuracy": f"{accuracy_CN:.2f}%",
-#         }
-#         rows.append(row)
+        # (E) Prepare row
+        row = {
+            "Spot": f"{S0:.2f}",
+            "True Value": f"{true_price:.4f}",
+            "Exp Value": f"{FE_value:.4f}",
+            "Exp Accuracy": f"{accuracy_FE:.2f}%",
+            "Imp Value": f"{BE_value:.4f}",
+            "Imp Accuracy": f"{accuracy_BE:.2f}%",
+            "CN Value": f"{CN_value:.4f}",
+            "CN Accuracy": f"{accuracy_CN:.2f}%",
+        }
+        rows.append(row)
 
-#     df = pd.DataFrame(rows)
-#     st.subheader("1) Comparison of Three Finite‐Difference Methods vs. Reference")
-#     st.table(df)
+    df = pd.DataFrame(rows)
+    st.subheader("1) Comparison of Three Finite‐Difference Methods vs. Reference")
+    st.table(df)
 
-#     # ============================
-#     # 2) Basic Convergence Test
-#     # ============================
-#     with st.expander("Convergence & Runtime Analysis"):
-#         st.markdown("""
-#         **Goal**: Test how each scheme's accuracy and runtime behave as we refine the time-step \(\Delta t\).
-#         We'll fix a single spot \(S_0\) and compare:
-#         - Price error vs. \(\Delta t\)
-#         - CPU time vs. \(\Delta t\)
-#         """)
+    # ============================
+    # 2) Basic Convergence Test
+    # ============================
+    with st.expander("Convergence & Runtime Analysis"):
+        st.markdown("""
+        **Goal**: Test how each scheme's accuracy and runtime behave as we refine the time-step \(\Delta t\).
+        We'll fix a single spot \(S_0\) and compare:
+        - Price error vs. \(\Delta t\)
+        - CPU time vs. \(\Delta t\)
+        """)
 
-#         # Let user pick a single S0 for the test
-#         test_spot = st.number_input("Spot for Convergence Test", value=100.0, step=1.0)
+        # Let user pick a single S0 for the test
+        test_spot = st.number_input("Spot for Convergence Test", value=100.0, step=1.0)
 
-#         # Range of dt values for each scheme
-#         st.write("Choose a range of dt values to test (logarithmic or linear).")
-#         dt_min = st.number_input("Min dt for test", value=0.0001, format="%.6f")
-#         dt_max = st.number_input("Max dt for test", value=0.01, format="%.6f")
-#         n_steps = st.number_input("Number of dt steps", value=5, min_value=2)
+        # Range of dt values for each scheme
+        st.write("Choose a range of dt values to test (logarithmic or linear).")
+        dt_min = st.number_input("Min dt for test", value=0.0001, format="%.6f")
+        dt_max = st.number_input("Max dt for test", value=0.01, format="%.6f")
+        n_steps = st.number_input("Number of dt steps", value=5, min_value=2)
 
-#         if st.button("Run Convergence Test"):
-#             dt_values = np.linspace(dt_min, dt_max, n_steps)
-#             # We'll keep dS fixed for each scheme (use the user-chosen ones).
-#             # If you want to vary dS as well, you can do a nested loop.
+        if st.button("Run Convergence Test"):
+            dt_values = np.linspace(dt_min, dt_max, n_steps)
+            # We'll keep dS fixed for each scheme (use the user-chosen ones).
+            # If you want to vary dS as well, you can do a nested loop.
 
-#             true_price_test = max(barrier_option_price(test_spot, K, T, r, q, sigma, barrier, option_type), 1e-12)
-#             results_FE = []
-#             results_BE = []
-#             results_CN = []
+            true_price_test = max(barrier_option_price(test_spot, K, T, r, q, sigma, barrier, option_type), 1e-12)
+            results_FE = []
+            results_BE = []
+            results_CN = []
 
-#             for dt_val in dt_values:
-#                 # Forward Euler
-#                 start_FE = time.perf_counter()
-#                 FE_val, _, _ = forward_euler(test_spot, K, T, r, q, sigma, dS_explicit, dt_val, barrier, option_type)
-#                 cpu_FE = time.perf_counter() - start_FE
-#                 error_FE = abs(FE_val - true_price_test)
+            for dt_val in dt_values:
+                # Forward Euler
+                start_FE = time.perf_counter()
+                FE_val, _, _ = forward_euler(test_spot, K, T, r, q, sigma, dS_explicit, dt_val, barrier, option_type)
+                cpu_FE = time.perf_counter() - start_FE
+                error_FE = abs(FE_val - true_price_test)
 
-#                 # Backward Euler
-#                 start_BE = time.perf_counter()
-#                 BE_val, _, _ = backward_euler(test_spot, K, T, r, q, sigma, dS_implicit, dt_val, barrier, option_type)
-#                 cpu_BE = time.perf_counter() - start_BE
-#                 error_BE = abs(BE_val - true_price_test)
+                # Backward Euler
+                start_BE = time.perf_counter()
+                BE_val, _, _ = backward_euler(test_spot, K, T, r, q, sigma, dS_implicit, dt_val, barrier, option_type)
+                cpu_BE = time.perf_counter() - start_BE
+                error_BE = abs(BE_val - true_price_test)
 
-#                 # Crank–Nicolson
-#                 start_CN = time.perf_counter()
-#                 CN_val, _, _ = crank_nicolson(test_spot, K, T, r, q, sigma, dS_CN, dt_val, barrier, option_type)
-#                 cpu_CN = time.perf_counter() - start_CN
-#                 error_CN = abs(CN_val - true_price_test)
+                # Crank–Nicolson
+                start_CN = time.perf_counter()
+                CN_val, _, _ = crank_nicolson(test_spot, K, T, r, q, sigma, dS_CN, dt_val, barrier, option_type)
+                cpu_CN = time.perf_counter() - start_CN
+                error_CN = abs(CN_val - true_price_test)
 
-#                 results_FE.append((dt_val, error_FE, cpu_FE))
-#                 results_BE.append((dt_val, error_BE, cpu_BE))
-#                 results_CN.append((dt_val, error_CN, cpu_CN))
+                results_FE.append((dt_val, error_FE, cpu_FE))
+                results_BE.append((dt_val, error_BE, cpu_BE))
+                results_CN.append((dt_val, error_CN, cpu_CN))
 
-#             # Convert to DataFrame for display
-#             df_FE = pd.DataFrame(results_FE, columns=["dt", "Error", "CPU_Time"])
-#             df_BE = pd.DataFrame(results_BE, columns=["dt", "Error", "CPU_Time"])
-#             df_CN = pd.DataFrame(results_CN, columns=["dt", "Error", "CPU_Time"])
+            # Convert to DataFrame for display
+            df_FE = pd.DataFrame(results_FE, columns=["dt", "Error", "CPU_Time"])
+            df_BE = pd.DataFrame(results_BE, columns=["dt", "Error", "CPU_Time"])
+            df_CN = pd.DataFrame(results_CN, columns=["dt", "Error", "CPU_Time"])
 
-#             st.write("**Forward Euler** results:")
-#             st.table(df_FE)
-#             st.write("**Backward Euler** results:")
-#             st.table(df_BE)
-#             st.write("**Crank–Nicolson** results:")
-#             st.table(df_CN)
+            st.write("**Forward Euler** results:")
+            st.table(df_FE)
+            st.write("**Backward Euler** results:")
+            st.table(df_BE)
+            st.write("**Crank–Nicolson** results:")
+            st.table(df_CN)
 
-#             # Now let's plot Error vs dt for each scheme
-#             fig_err = plt.figure()
-#             plt.plot(df_FE["dt"], df_FE["Error"], marker="o", label="Explicit (FE)")
-#             plt.plot(df_BE["dt"], df_BE["Error"], marker="o", label="Implicit (BE)")
-#             plt.plot(df_CN["dt"], df_CN["Error"], marker="o", label="Crank–Nicolson")
-#             plt.xlabel("dt")
-#             plt.ylabel("Absolute Error")
-#             plt.legend()
-#             plt.title("Error vs. dt (at S0 = {:.2f})".format(test_spot))
-#             st.pyplot(fig_err)
+            # Now let's plot Error vs dt for each scheme
+            fig_err = plt.figure()
+            plt.plot(df_FE["dt"], df_FE["Error"], marker="o", label="Explicit (FE)")
+            plt.plot(df_BE["dt"], df_BE["Error"], marker="o", label="Implicit (BE)")
+            plt.plot(df_CN["dt"], df_CN["Error"], marker="o", label="Crank–Nicolson")
+            plt.xlabel("dt")
+            plt.ylabel("Absolute Error")
+            plt.legend()
+            plt.title("Error vs. dt (at S0 = {:.2f})".format(test_spot))
+            st.pyplot(fig_err)
 
-#             # Plot CPU time vs dt
-#             fig_time = plt.figure()
-#             plt.plot(df_FE["dt"], df_FE["CPU_Time"], marker="o", label="Explicit (FE)")
-#             plt.plot(df_BE["dt"], df_BE["CPU_Time"], marker="o", label="Implicit (BE)")
-#             plt.plot(df_CN["dt"], df_CN["CPU_Time"], marker="o", label="Crank–Nicolson")
-#             plt.xlabel("dt")
-#             plt.ylabel("CPU Time (seconds)")
-#             plt.legend()
-#             plt.title("Runtime vs. dt (at S0 = {:.2f})".format(test_spot))
-#             st.pyplot(fig_time)
+            # Plot CPU time vs dt
+            fig_time = plt.figure()
+            plt.plot(df_FE["dt"], df_FE["CPU_Time"], marker="o", label="Explicit (FE)")
+            plt.plot(df_BE["dt"], df_BE["CPU_Time"], marker="o", label="Implicit (BE)")
+            plt.plot(df_CN["dt"], df_CN["CPU_Time"], marker="o", label="Crank–Nicolson")
+            plt.xlabel("dt")
+            plt.ylabel("CPU Time (seconds)")
+            plt.legend()
+            plt.title("Runtime vs. dt (at S0 = {:.2f})".format(test_spot))
+            st.pyplot(fig_time)
         
 if __name__ == "__main__":
     app()
