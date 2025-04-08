@@ -2623,7 +2623,7 @@ def app():
     q  = st.sidebar.number_input("Dividend Yield (q)", value=0.00, step=0.01)
     sigma = st.sidebar.number_input("Volatility (sigma)", value=0.2, step=0.01)
     barrier = st.sidebar.number_input("Barrier", value=80.0, step=1.0)
-    dS = st.sidebar.number_input("Space Step (dS)", value=1.0, step=0.1)
+    dS = st.sidebar.number_input("Space Step (dS)", value=1.0, step=0.000001)
     dt = st.sidebar.number_input("Time Step (dt)", value=0.001, step=0.001)
     option_type = st.sidebar.selectbox(
     "Option Type",
@@ -2731,6 +2731,8 @@ def app():
         
 
         st.write(f"**PDE price at S0** = {priceSol:.4f}")
+        valb = barrier_option_price(s, K, T, r, q, sigma, barrier, option_type)
+        st.write(valb)
 
         # 2) Evaluate the closed-form formula over the same S_grid
         #    for "down-and-in call"
