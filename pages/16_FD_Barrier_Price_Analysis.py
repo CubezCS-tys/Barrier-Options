@@ -513,7 +513,7 @@ def forward_euler_knock_out_put(S0, K, T, r, sigma, dS, dt, barrier, barrier_typ
 ###############################################################################
 # 3) Main wrapper: forward_euler(...)
 ###############################################################################
-def forward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type):
+def forward_euler(S0, K, T, r, q, sigma, dS, dt, barrier, option_type):
     """
     Main wrapper for forward Euler barrier options.
     We handle the 'knock-out' case directly by zeroing out the barrier region.
@@ -857,7 +857,7 @@ def backward_euler_knock_out_put(S0, K, T, r, sigma, dS, dt, barrier, barrier_ty
 ###############################################################################
 # 3) Main Backward Euler Barrier Wrapper
 ###############################################################################
-def backward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type):
+def backward_euler(S0, K, T, r, q, sigma, dS, dt, barrier, option_type):
     """
     Main wrapper for backward Euler pricing of barrier options.
     We implement the 'knock-out' PDE directly and use in-out parity:
@@ -1161,7 +1161,7 @@ def crank_nicolson_knock_out_put(S0, K, T, r, sigma, dS, dt, barrier, barrier_ty
 ###############################################################################
 # 3) Main Crank–Nicolson Barrier Wrapper
 ###############################################################################
-def crank_nicolson(S0, K, T, r, sigma, dS, dt, barrier, option_type):
+def crank_nicolson(S0, K, T, r, q, sigma, dS, dt, barrier, option_type):
     """
     Main wrapper for Crank–Nicolson pricing of barrier options.
     Knock–in options are obtained via in–out parity:
@@ -1292,6 +1292,7 @@ def app():
             # -----------------------------------------------------
             t0 = time.perf_counter()
             FE_value, S_grid_FE, FE_prices = forward_euler(S0, K, T, r, q, sigma, dS_explicit, dt_explicit, barrier, option_type)
+                                             
             time_FE  = time.perf_counter() - t0
 
             err_FE = np.abs(FE_value - true_price)
