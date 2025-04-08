@@ -1674,27 +1674,53 @@ def app():
             st.write("**Crank–Nicolson** results:")
             st.table(df_CN)
 
-            # Now let's plot Error vs dt for each scheme
-            fig_err = plt.figure()
-            plt.plot(df_FE["dt"], df_FE["Error"], marker="o", label="Explicit (FE)")
-            plt.plot(df_BE["dt"], df_BE["Error"], marker="o", label="Implicit (BE)")
-            plt.plot(df_CN["dt"], df_CN["Error"], marker="o", label="Crank–Nicolson")
-            plt.xlabel("dt")
-            plt.ylabel("Absolute Error")
-            plt.legend()
-            plt.title("Error vs. dt (at S0 = {:.2f})".format(test_spot))
-            st.pyplot(fig_err)
+            import plotly.graph_objects as go
 
-            # Plot CPU time vs dt
-            fig_time = plt.figure()
-            plt.plot(df_FE["dt"], df_FE["CPU_Time"], marker="o", label="Explicit (FE)")
-            plt.plot(df_BE["dt"], df_BE["CPU_Time"], marker="o", label="Implicit (BE)")
-            plt.plot(df_CN["dt"], df_CN["CPU_Time"], marker="o", label="Crank–Nicolson")
-            plt.xlabel("dt")
-            plt.ylabel("CPU Time (seconds)")
-            plt.legend()
-            plt.title("Runtime vs. dt (at S0 = {:.2f})".format(test_spot))
-            st.pyplot(fig_time)
+            fig_err = go.Figure()
+
+            fig_err.add_trace(go.Scatter(
+                x=df_FE["dt"], y=df_FE["Error"],
+                mode='lines+markers', name='Forward Euler'
+            ))
+
+            fig_err.add_trace(go.Scatter(
+                x=df_BE["dt"], y=df_BE["Error"],
+                mode='lines+markers', name='Backward Euler'
+            ))
+
+            fig_err.add_trace(go.Scatter(
+                x=df_CN["dt"], y=df_CN["Error"],
+                mode='lines+markers', name='Crank–Nicolson'
+            ))
+
+            fig_time = go.Figure()
+
+            fig_time.add_trace(go.Scatter(
+                x=df_FE["dt"], y=df_FE["CPU_Time"],
+                mode='lines+markers', name='Forward Euler'
+            ))
+
+            fig_time.add_trace(go.Scatter(
+                x=df_BE["dt"], y=df_BE["CPU_Time"],
+                mode='lines+markers', name='Backward Euler'
+            ))
+
+            fig_time.add_trace(go.Scatter(
+                x=df_CN["dt"], y=df_CN["CPU_Time"],
+                mode='lines+markers', name='Crank–Nicolson'
+            ))
+
+            fig_time.update_layout(
+                title=f"Runtime vs. dt (at S₀ = {test_spot:.2f})",
+                xaxis_title="Time Step (dt)",
+                yaxis_title="CPU Time (seconds)",
+                legend_title="Method",
+                xaxis_type="log",
+                height=500
+            )
+
+            st.plotly_chart(fig_time, use_container_width=True)
+
         
 if __name__ == "__main__":
     app()
