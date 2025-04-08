@@ -1693,6 +1693,18 @@ def app():
                 mode='lines+markers', name='Crank–Nicolson'
             ))
 
+            fig_err.update_layout(
+                title=f"Error vs. dt (at S₀ = {test_spot:.2f})",
+                xaxis_title="Time Step (dt)",
+                yaxis_title="Absolute Error",
+                legend_title="Method",
+                xaxis_type="log",  # Optional: log scale for dt
+                yaxis_type="log",
+                height=500
+            )
+
+            st.plotly_chart(fig_err, use_container_width=True)
+            
             fig_time = go.Figure()
 
             fig_time.add_trace(go.Scatter(
