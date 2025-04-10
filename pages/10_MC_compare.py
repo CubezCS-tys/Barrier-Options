@@ -596,209 +596,322 @@ def mc_barrier_option_combined(S0, K, H, T, r, q, sigma, N, M, option_type):
 #             st.markdown(f"**Closed-Form Analytical Price:** `{analytical_price:.4f}`")
 #     else:
 #         st.info("Click 'Run MC' to compute and compare methods over different time steps (M) and number of paths (N).")
+#################################################################################################
+# st.set_page_config(page_title="Barrier Option Pricing: Single Plot Comparison")
 
-st.set_page_config(page_title="Barrier Option Pricing: Single Plot Comparison")
+# st.sidebar.header("Input Parameters")
+# option_type = st.sidebar.selectbox(
+#     "Barrier Option Type",
+#     [
+#         "down-and-in call",
+#         "down-and-out call",
+#         "down-and-in put",
+#         "down-and-out put",
+#         "up-and-in call",
+#         "up-and-out call",
+#         "up-and-in put",
+#         "up-and-out put",
+#     ]
+# )
+# S0 = st.sidebar.number_input("Spot (S0)", value=50.0)
+# K  = st.sidebar.number_input("Strike (K)", value=50.0)
+# H  = st.sidebar.number_input("Barrier (H)", value=40.0)
+# T  = st.sidebar.number_input("Maturity (T)", value=1.0)
+# r  = st.sidebar.number_input("Risk-Free Rate (r)", value=0.1)
+# q  = st.sidebar.number_input("Dividend Yield (q)", value=0.00)
+# sigma = st.sidebar.number_input("Volatility (σ)", value=0.2)
 
-st.sidebar.header("Input Parameters")
-option_type = st.sidebar.selectbox(
-    "Barrier Option Type",
-    [
-        "down-and-in call",
-        "down-and-out call",
-        "down-and-in put",
-        "down-and-out put",
-        "up-and-in call",
-        "up-and-out call",
-        "up-and-in put",
-        "up-and-out put",
-    ]
-)
+# st.sidebar.write("MC Steps (M) and # of Paths (N)")
+
+# # Multiple M values
+# default_M = "50,100,200"
+# M_str = st.sidebar.text_input("Comma-separated M values:", default_M)
+# M_list = []
+# try:
+#     M_list = sorted([int(x.strip()) for x in M_str.split(",") if int(x.strip()) > 0])
+# except:
+#     st.error("Invalid input for M values. Please enter positive integers separated by commas.")
+
+# # Multiple N values
+# default_N = "100,1000,10000"
+# N_str = st.sidebar.text_input("Comma-separated N values:", default_N)
+# N_list = []
+# try:
+#     N_list = sorted([int(x.strip()) for x in N_str.split(",") if int(x.strip()) > 0])
+# except:
+#     st.error("Invalid input for N values. Please enter positive integers separated by commas.")
+
+# tab1, tab2 = st.tabs(["Closed-Form", "MC Analysis"])
+
+# with tab1:
+#     st.title("Closed-Form (Analytical) Price")
+#     cf_price = barrier_option_price(S0, K, T, r, q, sigma, H, option_type)
+#     if cf_price is not None:
+#         st.subheader(f"{option_type.capitalize()} Price = {cf_price:.4f}")
+#     else:
+#         st.write("No closed-form formula implemented or invalid parameters.")
+
+# # Initialize simulation results in session_state if not already present.
+# if "df_results" not in st.session_state:
+#     st.session_state.df_results = None
+# if "analytical_price" not in st.session_state:
+#     st.session_state.analytical_price = None
+
+# with tab2:
+#     st.title("Monte Carlo Comparison")
+    
+#     # When the user clicks "Run MC", store results in session state
+#     if st.button("Run MC"):
+#         analytical_price = barrier_option_price(S0, K, T, r, q, sigma, H, option_type)
+#         st.session_state.analytical_price = analytical_price
+
+#         rows = []
+#         for m_val in M_list:
+#             for n_val in N_list:
+#                 mc_plain = mc_barrier_option_plain(S0, K, H, T, r, q, sigma, n_val, m_val, option_type)
+#                 mc_cv    = mc_barrier_option_cv(S0, K, H, T, r, q, sigma, n_val, m_val, option_type)
+#                 mc_av    = mc_barrier_option_av(S0, K, H, T, r, q, sigma, n_val, m_val, option_type)
+#                 mc_comb  = mc_barrier_option_combined(S0, K, H, T, r, q, sigma, n_val, m_val, option_type)
+#                 rows.append({
+#                     "M": m_val,
+#                     "N": n_val,
+#                     "Plain": mc_plain,
+#                     "CV": mc_cv,
+#                     "AV": mc_av,
+#                     "Combined": mc_comb,
+#                     "Plain Error": np.abs(mc_plain - analytical_price) if analytical_price is not None else np.nan,
+#                     "CV Error": np.abs(mc_cv - analytical_price) if analytical_price is not None else np.nan,
+#                     "AV Error": np.abs(mc_av - analytical_price) if analytical_price is not None else np.nan,
+#                     "Combined Error": np.abs(mc_comb - analytical_price) if analytical_price is not None else np.nan
+#                 })
+
+#         df = pd.DataFrame(rows)
+#         st.session_state.df_results = df
+
+#     # If simulation has been run, display the results.
+#     if st.session_state.df_results is not None:
+#         df = st.session_state.df_results
+#         analytical_price = st.session_state.analytical_price
+        
+#         # Pivot tables for each method (Price Estimates)
+#         st.write("## Pivot Tables by Method (Price Estimates)")
+#         st.write("### Plain MC")
+#         df_plain = df.pivot(index="N", columns="M", values="Plain")
+#         st.dataframe(df_plain.style.format("{:.4f}"), use_container_width=True)
+
+#         st.write("### Control Variate (CV)")
+#         df_cv = df.pivot(index="N", columns="M", values="CV")
+#         st.dataframe(df_cv.style.format("{:.4f}"), use_container_width=True)
+
+#         st.write("### Antithetic Variate (AV)")
+#         df_av = df.pivot(index="N", columns="M", values="AV")
+#         st.dataframe(df_av.style.format("{:.4f}"), use_container_width=True)
+
+#         st.write("### Combined (CV + AV)")
+#         df_comb = df.pivot(index="N", columns="M", values="Combined")
+#         st.dataframe(df_comb.style.format("{:.4f}"), use_container_width=True)
+
+#         # Graph comparing option values for a selected M
+#         st.write("## Option Value Comparison (Variance Reduction Techniques)")
+#         df_values = df[["M", "N", "Plain", "CV", "AV", "Combined"]].copy()
+#         df_melt_values = df_values.melt(id_vars=["M", "N"],
+#                                         value_vars=["Plain", "CV", "AV", "Combined"],
+#                                         var_name="Method", value_name="OptionValue")
+#         selected_M = st.selectbox("Select M to visualize option value across N:", M_list, key="value_M")
+#         df_plot_values = df_melt_values[df_melt_values["M"] == selected_M]
+#         fig_value = px.line(
+#             df_plot_values,
+#             x="N",
+#             y="OptionValue",
+#             color="Method",
+#             markers=True,
+#             title=f"Option Value vs. N at M={selected_M}"
+#         )
+#         # Enhance 2D plot axes readability
+#         fig_value.update_layout(
+#             title={"x":0.5, "xanchor":"center", "font": {"size":24}},
+#             legend_title_text="MC Method",
+#             xaxis=dict(
+#                 title="Number of Paths (N)",
+#                 titlefont=dict(size=20, color='black'),
+#                 tickfont=dict(size=16, color='black')
+#             ),
+#             yaxis=dict(
+#                 title="Option Value",
+#                 titlefont=dict(size=20, color='black'),
+#                 tickfont=dict(size=16, color='black')
+#             )
+#         )
+#         if analytical_price is not None:
+#             fig_value.add_hline(
+#                 y=analytical_price,
+#                 line_dash="dash",
+#                 line_color="red",
+#                 annotation_text=f"Analytical = {analytical_price:.4f}",
+#                 annotation_position="top right"
+#             )
+#         st.plotly_chart(fig_value, use_container_width=True)
+
+#         # 3D Surface Plot for Absolute Error with enhanced axis readability
+#         st.write("## 3D Surface Plot: Absolute Error vs. N and M")
+#         selected_error_method = st.selectbox(
+#             "Select MC Method Error for 3D Visualization:", 
+#             ["Plain Error", "CV Error", "AV Error", "Combined Error"],
+#             key="error_method"
+#         )
+#         df_error_pivot = df.pivot(index="N", columns="M", values=selected_error_method)
+#         x_vals = list(df_error_pivot.columns)  # Time Steps (M)
+#         y_vals = list(df_error_pivot.index)     # Number of Paths (N)
+#         z_vals = df_error_pivot.values          # 2D array of error values
+#         fig_error_surface = go.Figure(data=[go.Surface(x=x_vals, y=y_vals, z=z_vals)])
+#         fig_error_surface.update_layout(
+#             title=f"3D Surface Plot of Absolute Error: {selected_error_method}",
+#             scene=dict(
+#                 xaxis=dict(
+#                     title="Time Steps (M)",
+#                     titlefont=dict(size=20, color='black'),
+#                     tickfont=dict(size=16, color='black')
+#                 ),
+#                 yaxis=dict(
+#                     title="Number of Paths (N)",
+#                     titlefont=dict(size=20, color='black'),
+#                     tickfont=dict(size=16, color='black')
+#                 ),
+#                 zaxis=dict(
+#                     title="Absolute Error",
+#                     titlefont=dict(size=20, color='black'),
+#                     tickfont=dict(size=16, color='black')
+#                 )
+#             )
+#         )
+#         st.plotly_chart(fig_error_surface, use_container_width=True)
+
+#         # Full results table with highlighted minimum errors
+#         st.write("## Full Results (Including Errors)")
+#         def highlight_min_error(row):
+#             error_cols = ["Plain Error", "CV Error", "AV Error", "Combined Error"]
+#             is_min = row[error_cols] == row[error_cols].min()
+#             return ["background-color: #ffff66" if v else "" for v in is_min]
+
+#         df_style = df.style.format("{:.4f}") \
+#                            .apply(highlight_min_error, axis=1, 
+#                                   subset=["Plain Error", "CV Error", "AV Error", "Combined Error"])
+#         st.dataframe(df_style, use_container_width=True)
+
+#         if analytical_price is not None:
+#             st.markdown(f"**Closed-Form Analytical Price:** `{analytical_price:.4f}`")
+#     else:
+#         st.info("Click 'Run MC' to compute and compare methods over different time steps (M) and number of paths (N).")
+
+
+import streamlit as st
+import numpy as np
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+
+
+
+st.set_page_config(page_title="Barrier Option Pricing: Enhanced UI", layout="wide")
+
+# Sidebar Inputs
+st.sidebar.header("📌 Input Parameters")
+option_type = st.sidebar.selectbox("Barrier Option Type", [
+    "down-and-in call", "down-and-out call", "down-and-in put", "down-and-out put",
+    "up-and-in call", "up-and-out call", "up-and-in put", "up-and-out put"
+])
 S0 = st.sidebar.number_input("Spot (S0)", value=50.0)
-K  = st.sidebar.number_input("Strike (K)", value=50.0)
-H  = st.sidebar.number_input("Barrier (H)", value=40.0)
-T  = st.sidebar.number_input("Maturity (T)", value=1.0)
-r  = st.sidebar.number_input("Risk-Free Rate (r)", value=0.1)
-q  = st.sidebar.number_input("Dividend Yield (q)", value=0.00)
+K = st.sidebar.number_input("Strike (K)", value=50.0)
+H = st.sidebar.number_input("Barrier (H)", value=40.0)
+T = st.sidebar.number_input("Maturity (T)", value=1.0)
+r = st.sidebar.number_input("Risk-Free Rate (r)", value=0.1)
+q = st.sidebar.number_input("Dividend Yield (q)", value=0.00)
 sigma = st.sidebar.number_input("Volatility (σ)", value=0.2)
 
-st.sidebar.write("MC Steps (M) and # of Paths (N)")
+st.sidebar.markdown("---")
+st.sidebar.subheader("Monte Carlo Grid")
+M_list = sorted([int(x.strip()) for x in st.sidebar.text_input("Comma-separated M values:", "50,100,200").split(",")])
+N_list = sorted([int(x.strip()) for x in st.sidebar.text_input("Comma-separated N values:", "100,1000,10000").split(",")])
 
-# Multiple M values
-default_M = "50,100,200"
-M_str = st.sidebar.text_input("Comma-separated M values:", default_M)
-M_list = []
-try:
-    M_list = sorted([int(x.strip()) for x in M_str.split(",") if int(x.strip()) > 0])
-except:
-    st.error("Invalid input for M values. Please enter positive integers separated by commas.")
+st.header("📊 Monte Carlo Method Comparison")
+if st.button("▶️ Run Monte Carlo Simulation"):
+    analytical_price = barrier_option_price(S0, K, T, r, q, sigma, H, option_type)
+    results = []
+    for m in M_list:
+        for n in N_list:
+            plain = mc_barrier_option_plain(S0, K, H, T, r, q, sigma, n, m, option_type)
+            cv = mc_barrier_option_cv(S0, K, H, T, r, q, sigma, n, m, option_type)
+            av = mc_barrier_option_av(S0, K, H, T, r, q, sigma, n, m, option_type)
+            comb = mc_barrier_option_combined(S0, K, H, T, r, q, sigma, n, m, option_type)
+            results.append({
+                "M": m, "N": n, "Plain": plain, "CV": cv, "AV": av, "Combined": comb,
+                "Plain Error": abs(plain - analytical_price),
+                "CV Error": abs(cv - analytical_price),
+                "AV Error": abs(av - analytical_price),
+                "Combined Error": abs(comb - analytical_price)
+            })
+    df = pd.DataFrame(results)
+    st.session_state.df_results = df
+    st.session_state.analytical_price = analytical_price
 
-# Multiple N values
-default_N = "100,1000,10000"
-N_str = st.sidebar.text_input("Comma-separated N values:", default_N)
-N_list = []
-try:
-    N_list = sorted([int(x.strip()) for x in N_str.split(",") if int(x.strip()) > 0])
-except:
-    st.error("Invalid input for N values. Please enter positive integers separated by commas.")
+if "df_results" in st.session_state:
+    df = st.session_state.df_results
+    analytical_price = st.session_state.analytical_price
 
-tab1, tab2 = st.tabs(["Closed-Form", "MC Analysis"])
+    col1, col2 = st.columns(2)
 
-with tab1:
-    st.title("Closed-Form (Analytical) Price")
-    cf_price = barrier_option_price(S0, K, T, r, q, sigma, H, option_type)
-    if cf_price is not None:
-        st.subheader(f"{option_type.capitalize()} Price = {cf_price:.4f}")
-    else:
-        st.write("No closed-form formula implemented or invalid parameters.")
+    with col1:
+        st.markdown("### 📋 Full Error Table")
+        def highlight_min(row):
+            errors = row[["Plain Error", "CV Error", "AV Error", "Combined Error"]]
+            return ['background-color: #90ee90' if v == errors.min() else '' for v in errors]
+        st.dataframe(df.style.format("{:.4f}").apply(highlight_min, axis=1, subset=["Plain Error", "CV Error", "AV Error", "Combined Error"]), use_container_width=True)
 
-# Initialize simulation results in session_state if not already present.
-if "df_results" not in st.session_state:
-    st.session_state.df_results = None
-if "analytical_price" not in st.session_state:
-    st.session_state.analytical_price = None
-
-with tab2:
-    st.title("Monte Carlo Comparison")
-    
-    # When the user clicks "Run MC", store results in session state
-    if st.button("Run MC"):
-        analytical_price = barrier_option_price(S0, K, T, r, q, sigma, H, option_type)
-        st.session_state.analytical_price = analytical_price
-
-        rows = []
-        for m_val in M_list:
-            for n_val in N_list:
-                mc_plain = mc_barrier_option_plain(S0, K, H, T, r, q, sigma, n_val, m_val, option_type)
-                mc_cv    = mc_barrier_option_cv(S0, K, H, T, r, q, sigma, n_val, m_val, option_type)
-                mc_av    = mc_barrier_option_av(S0, K, H, T, r, q, sigma, n_val, m_val, option_type)
-                mc_comb  = mc_barrier_option_combined(S0, K, H, T, r, q, sigma, n_val, m_val, option_type)
-                rows.append({
-                    "M": m_val,
-                    "N": n_val,
-                    "Plain": mc_plain,
-                    "CV": mc_cv,
-                    "AV": mc_av,
-                    "Combined": mc_comb,
-                    "Plain Error": np.abs(mc_plain - analytical_price) if analytical_price is not None else np.nan,
-                    "CV Error": np.abs(mc_cv - analytical_price) if analytical_price is not None else np.nan,
-                    "AV Error": np.abs(mc_av - analytical_price) if analytical_price is not None else np.nan,
-                    "Combined Error": np.abs(mc_comb - analytical_price) if analytical_price is not None else np.nan
-                })
-
-        df = pd.DataFrame(rows)
-        st.session_state.df_results = df
-
-    # If simulation has been run, display the results.
-    if st.session_state.df_results is not None:
-        df = st.session_state.df_results
-        analytical_price = st.session_state.analytical_price
-        
-        # Pivot tables for each method (Price Estimates)
-        st.write("## Pivot Tables by Method (Price Estimates)")
-        st.write("### Plain MC")
+        st.markdown("### 📊 Pivot Tables by Method")
+        st.write("#### Plain MC")
         df_plain = df.pivot(index="N", columns="M", values="Plain")
         st.dataframe(df_plain.style.format("{:.4f}"), use_container_width=True)
 
-        st.write("### Control Variate (CV)")
+        st.write("#### Control Variate")
         df_cv = df.pivot(index="N", columns="M", values="CV")
         st.dataframe(df_cv.style.format("{:.4f}"), use_container_width=True)
 
-        st.write("### Antithetic Variate (AV)")
+        st.write("#### Antithetic Variate")
         df_av = df.pivot(index="N", columns="M", values="AV")
         st.dataframe(df_av.style.format("{:.4f}"), use_container_width=True)
 
-        st.write("### Combined (CV + AV)")
+        st.write("#### Combined Method")
         df_comb = df.pivot(index="N", columns="M", values="Combined")
         st.dataframe(df_comb.style.format("{:.4f}"), use_container_width=True)
 
-        # Graph comparing option values for a selected M
-        st.write("## Option Value Comparison (Variance Reduction Techniques)")
-        df_values = df[["M", "N", "Plain", "CV", "AV", "Combined"]].copy()
-        df_melt_values = df_values.melt(id_vars=["M", "N"],
-                                        value_vars=["Plain", "CV", "AV", "Combined"],
-                                        var_name="Method", value_name="OptionValue")
-        selected_M = st.selectbox("Select M to visualize option value across N:", M_list, key="value_M")
-        df_plot_values = df_melt_values[df_melt_values["M"] == selected_M]
-        fig_value = px.line(
-            df_plot_values,
-            x="N",
-            y="OptionValue",
-            color="Method",
-            markers=True,
-            title=f"Option Value vs. N at M={selected_M}"
-        )
-        # Enhance 2D plot axes readability
-        fig_value.update_layout(
-            title={"x":0.5, "xanchor":"center", "font": {"size":24}},
-            legend_title_text="MC Method",
-            xaxis=dict(
-                title="Number of Paths (N)",
-                titlefont=dict(size=20, color='black'),
-                tickfont=dict(size=16, color='black')
-            ),
-            yaxis=dict(
-                title="Option Value",
-                titlefont=dict(size=20, color='black'),
-                tickfont=dict(size=16, color='black')
-            )
-        )
-        if analytical_price is not None:
-            fig_value.add_hline(
-                y=analytical_price,
-                line_dash="dash",
-                line_color="red",
-                annotation_text=f"Analytical = {analytical_price:.4f}",
-                annotation_position="top right"
-            )
-        st.plotly_chart(fig_value, use_container_width=True)
+    with col2:
+        st.markdown("#### ✅ Summary Statistics")
+        best_row = df.loc[df['Combined Error'].idxmin()]
+        st.metric(label="Min Combined Error", value=f"{best_row['Combined Error']:.4f}")
+        st.markdown(f"**Best (M, N):** M = `{int(best_row['M'])}`, N = `{int(best_row['N'])}`")
+        st.metric(label="Combined Estimate", value=f"${best_row['Combined']:.4f}")
+        st.metric(label="Analytical Price", value=f"${analytical_price:.4f}")
 
-        # 3D Surface Plot for Absolute Error with enhanced axis readability
-        st.write("## 3D Surface Plot: Absolute Error vs. N and M")
-        selected_error_method = st.selectbox(
-            "Select MC Method Error for 3D Visualization:", 
-            ["Plain Error", "CV Error", "AV Error", "Combined Error"],
-            key="error_method"
-        )
-        df_error_pivot = df.pivot(index="N", columns="M", values=selected_error_method)
-        x_vals = list(df_error_pivot.columns)  # Time Steps (M)
-        y_vals = list(df_error_pivot.index)     # Number of Paths (N)
-        z_vals = df_error_pivot.values          # 2D array of error values
-        fig_error_surface = go.Figure(data=[go.Surface(x=x_vals, y=y_vals, z=z_vals)])
-        fig_error_surface.update_layout(
-            title=f"3D Surface Plot of Absolute Error: {selected_error_method}",
+        st.markdown("### 📈 Option Value vs N (for selected M)")
+        selected_M = st.selectbox("Select M value:", M_list)
+        df_melt = df[df["M"] == selected_M].melt(id_vars=["N"], value_vars=["Plain", "CV", "AV", "Combined"], var_name="Method", value_name="Option Value")
+        fig_line = px.line(df_melt, x="N", y="Option Value", color="Method", markers=True)
+        fig_line.add_hline(y=analytical_price, line_dash="dash", line_color="red", annotation_text=f"Analytical: {analytical_price:.4f}")
+        st.plotly_chart(fig_line, use_container_width=True)
+
+        st.markdown("### 🌍 3D Surface of Absolute Error")
+        error_method = st.selectbox("Choose Error Metric:", ["Plain Error", "CV Error", "AV Error", "Combined Error"])
+        df_surface = df.pivot(index="N", columns="M", values=error_method)
+        fig_surface = go.Figure(data=[go.Surface(z=df_surface.values, x=df_surface.columns, y=df_surface.index)])
+        fig_surface.update_layout(
             scene=dict(
-                xaxis=dict(
-                    title="Time Steps (M)",
-                    titlefont=dict(size=20, color='black'),
-                    tickfont=dict(size=16, color='black')
-                ),
-                yaxis=dict(
-                    title="Number of Paths (N)",
-                    titlefont=dict(size=20, color='black'),
-                    tickfont=dict(size=16, color='black')
-                ),
-                zaxis=dict(
-                    title="Absolute Error",
-                    titlefont=dict(size=20, color='black'),
-                    tickfont=dict(size=16, color='black')
-                )
-            )
+                xaxis_title="M",
+                yaxis_title="N",
+                zaxis_title="Error",
+                xaxis=dict(tickmode='linear'),
+                yaxis=dict(tickmode='linear')
+            ),
+            title=f"3D Error Surface: {error_method}",
+            margin=dict(l=0, r=0, b=0, t=30)
         )
-        st.plotly_chart(fig_error_surface, use_container_width=True)
-
-        # Full results table with highlighted minimum errors
-        st.write("## Full Results (Including Errors)")
-        def highlight_min_error(row):
-            error_cols = ["Plain Error", "CV Error", "AV Error", "Combined Error"]
-            is_min = row[error_cols] == row[error_cols].min()
-            return ["background-color: #ffff66" if v else "" for v in is_min]
-
-        df_style = df.style.format("{:.4f}") \
-                           .apply(highlight_min_error, axis=1, 
-                                  subset=["Plain Error", "CV Error", "AV Error", "Combined Error"])
-        st.dataframe(df_style, use_container_width=True)
-
-        if analytical_price is not None:
-            st.markdown(f"**Closed-Form Analytical Price:** `{analytical_price:.4f}`")
-    else:
-        st.info("Click 'Run MC' to compute and compare methods over different time steps (M) and number of paths (N).")
+        st.plotly_chart(fig_surface, use_container_width=True)
