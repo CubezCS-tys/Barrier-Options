@@ -2612,10 +2612,242 @@ def crank_nicolson(S0, K, T, r, sigma, dS, dt, barrier, option_type):
 ################################################################################
 # 5) The Streamlit app
 ################################################################################
+# def app():
+#     st.title("Barrier Options: PDE vs Analytical Barrier Formula")
+
+#     # Sidebar inputs
+#     S0 = st.sidebar.number_input("Spot Price (S0)", value=100.0, step=1.0)
+#     K  = st.sidebar.number_input("Strike Price (K)", value=100.0, step=1.0)
+#     T  = st.sidebar.number_input("Time to Maturity (T)", value=1.0, step=0.00001)
+#     r  = st.sidebar.number_input("Risk-Free Rate (r)", value=0.05, step=0.01)
+#     q  = st.sidebar.number_input("Dividend Yield (q)", value=0.00, step=0.01)
+#     sigma = st.sidebar.number_input("Volatility (sigma)", value=0.2, step=0.01)
+#     barrier = st.sidebar.number_input("Barrier", value=80.0, step=1.0)
+#     dS = st.sidebar.number_input("Space Step (dS)", value=1.0, step=0.000001)
+#     dt = st.sidebar.number_input("Time Step (dt)", value=0.001, step=0.001)
+#     option_type = st.sidebar.selectbox(
+#     "Option Type",
+#     [
+#         "down-and-in call",
+#         "down-and-out call",
+#         "down-and-in put",
+#         "down-and-out put",
+#         "up-and-in call",
+#         "up-and-out call",
+#         "up-and-in put",
+#         "up-and-out put",
+#     ])
+#     numerical_method = st.sidebar.selectbox("Numerical method", ("Forward Euler", "Backward Euler", "Crank-Nicolson"))
+
+
+#     if numerical_method == "Forward Euler":
+#     # 1) PDE solution for down-and-in
+#         #priceDin, S_grid, PDE_din = forward_euler_down_in_call(S0, K, T, r, sigma, dS, dt, barrier)
+#         priceSol, S_grid, PDE_sol = forward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type)
+        
+
+#         st.write(f"**PDE price at S0** = {priceSol:.4f}")
+
+#         # 2) Evaluate the closed-form formula over the same S_grid
+#         #    for "down-and-in call"
+#         analytic_vals = []
+#         for s in S_grid:
+#             val = barrier_option_price(s, K, T, r, q, sigma, barrier, option_type)
+#             # Some formulas may return None if input is out of domain logic.
+#             # We'll assume 0 if None is returned.
+#             if val is None or val < 0:
+#                 val = 0.0
+#             analytic_vals.append(val)
+            
+#         new_pde = PDE_sol[1:]
+#         # 3) Plot PDE vs Analytical
+#         fig = go.Figure()
+#         fig.add_trace(go.Scatter(
+#             x=S_grid, 
+#             #y=PDE_sol, 
+#             y = new_pde,
+#             mode="markers+lines", 
+#             name="PDE Solution"
+#         ))
+#         fig.add_trace(go.Scatter(
+#             x=S_grid,
+#             y=analytic_vals,
+#             mode="lines",
+#             name="Analytical "+option_type
+#         ))
+#         fig.update_layout(
+#             title= option_type+" vs Analytical",
+#             xaxis_title="Stock Price (S)",
+#             yaxis_title="Option Value"
+#         )
+#         st.plotly_chart(fig)
+        
+#     elif numerical_method == "Backward Euler":
+#     # 1) PDE solution for down-and-in
+#         #priceDin, S_grid, PDE_din = forward_euler_down_in_call(S0, K, T, r, sigma, dS, dt, barrier)
+#         priceSol, S_grid, PDE_sol = backward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type)
+        
+
+#         st.write(f"**PDE price at S0** = {priceSol:.4f}")
+
+#         # 2) Evaluate the closed-form formula over the same S_grid
+#         #    for "down-and-in call"
+#         analytic_vals = []
+#         for s in S_grid:
+#             val = barrier_option_price(s, K, T, r, q, sigma, barrier, option_type)
+#             # Some formulas may return None if input is out of domain logic.
+#             # We'll assume 0 if None is returned.
+#             if val is None or val < 0:
+#                 val = 0.0
+#             analytic_vals.append(val)
+            
+#         new_pde = PDE_sol[2:]
+#         # 3) Plot PDE vs Analytical
+#         fig = go.Figure()
+#         fig.add_trace(go.Scatter(
+#             x=S_grid, 
+#             #y=PDE_sol, 
+#             y = new_pde,
+#             mode="markers+lines", 
+#             name="PDE Solution"
+#         ))
+#         fig.add_trace(go.Scatter(
+#             x=S_grid,
+#             y=analytic_vals,
+#             mode="lines",
+#             name="Analytical "+option_type
+#         ))
+#         fig.update_layout(
+#             title= option_type+" vs Analytical",
+#             xaxis_title="Stock Price (S)",
+#             yaxis_title="Option Value"
+#         )
+#         st.plotly_chart(fig)
+        
+#     elif numerical_method == "Crank-Nicolson":
+#     # 1) PDE solution for down-and-in
+#         #priceDin, S_grid, PDE_din = forward_euler_down_in_call(S0, K, T, r, sigma, dS, dt, barrier)
+#         priceSol, S_grid, PDE_sol = crank_nicolson(S0, K, T, r, sigma, dS, dt, barrier, option_type)
+        
+
+#         st.write(f"**PDE price at S0** = {priceSol:.4f}")
+        
+
+#         # 2) Evaluate the closed-form formula over the same S_grid
+#         #    for "down-and-in call"
+#         analytic_vals = []
+#         for s in S_grid:
+#             val = barrier_option_price(s, K, T, r, q, sigma, barrier, option_type)
+#             # Some formulas may return None if input is out of domain logic.
+#             # We'll assume 0 if None is returned.
+#             if val is None or val < 0:
+#                 val = 0.0
+#             analytic_vals.append(val)
+            
+#         new_pde = PDE_sol[1:]
+#         # 3) Plot PDE vs Analytical
+#         fig = go.Figure()
+#         fig.add_trace(go.Scatter(
+#             x=S_grid, 
+#             #y=PDE_sol, 
+#             y = new_pde,
+#             mode="markers+lines", 
+#             name="PDE Solution"
+#         ))
+#         fig.add_trace(go.Scatter(
+#             x=S_grid,
+#             y=analytic_vals,
+#             mode="lines",
+#             name="Analytical "+option_type
+#         ))
+#         fig.update_layout(
+#             title= option_type+" vs Analytical",
+#             xaxis_title="Stock Price (S)",
+#             yaxis_title="Option Value"
+#         )
+#         st.plotly_chart(fig)
+        
+# if __name__ == "__main__":
+#     app()
+
+import streamlit as st
+import numpy as np
+import pandas as pd
+from scipy.stats import norm
+import plotly.graph_objects as go
+from scipy.interpolate import interp1d
+
+# -----------------------------------------------------------------------------
+# Custom CSS to improve the UI (metric boxes and overall styling)
+# -----------------------------------------------------------------------------
+st.markdown(
+    """
+    <style>
+    /* General background and font */
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    /* Main container styling */
+    .reportview-container .main {
+        background-color: #ffffff;
+        padding: 1rem 2rem;
+        border-radius: 10px;
+    }
+    /* Sidebar styling */
+    .css-1d391kg {  
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    /* Input field styling */
+    .stTextInput>div>div>input,
+    .stNumberInput>div>div>input {
+        border-radius: 5px;
+        border: 1px solid #aaa;
+    }
+    /* Metric cards container */
+    .metric-container {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-evenly;
+        margin-bottom: 1rem;
+    }
+    /* Individual metric card style */
+    .metric-card {
+        background-color: #fafafa;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 1rem;
+        flex: 1;
+        margin: 0 0.5rem;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .metric-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #555;
+    }
+    .metric-value {
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin-top: 0.2rem;
+        color: #333;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# -----------------------------------------------------------------------------
+# Barrier option page (the app)
+# -----------------------------------------------------------------------------
 def app():
     st.title("Barrier Options: PDE vs Analytical Barrier Formula")
-
-    # Sidebar inputs
+    
+    # Sidebar inputs (as before)
     S0 = st.sidebar.number_input("Spot Price (S0)", value=100.0, step=1.0)
     K  = st.sidebar.number_input("Strike Price (K)", value=100.0, step=1.0)
     T  = st.sidebar.number_input("Time to Maturity (T)", value=1.0, step=0.00001)
@@ -2624,148 +2856,131 @@ def app():
     sigma = st.sidebar.number_input("Volatility (sigma)", value=0.2, step=0.01)
     barrier = st.sidebar.number_input("Barrier", value=80.0, step=1.0)
     dS = st.sidebar.number_input("Space Step (dS)", value=1.0, step=0.000001)
-    dt = st.sidebar.number_input("Time Step (dt)", value=0.001, step=0.001)
+    dt = st.sidebar.number_input("Time Step (dt)", value=0.0001, step=0.001)
     option_type = st.sidebar.selectbox(
-    "Option Type",
-    [
-        "down-and-in call",
-        "down-and-out call",
-        "down-and-in put",
-        "down-and-out put",
-        "up-and-in call",
-        "up-and-out call",
-        "up-and-in put",
-        "up-and-out put",
-    ])
-    numerical_method = st.sidebar.selectbox("Numerical method", ("Forward Euler", "Backward Euler", "Crank-Nicolson"))
-
-
+        "Option Type",
+        [
+            "down-and-in call",
+            "down-and-out call",
+            "down-and-in put",
+            "down-and-out put",
+            "up-and-in call",
+            "up-and-out call",
+            "up-and-in put",
+            "up-and-out put",
+        ]
+    )
+    numerical_method = st.sidebar.selectbox("Numerical method", 
+                                              ("Forward Euler", "Backward Euler", "Crank-Nicolson"))
+    
+    # -------------------------------------------------------------------------
+    # Compute the PDE solution using the selected numerical method.
+    # We assume that the numerical functions accept arguments:
+    # (S0, K, T, r, sigma, dS, dt, barrier, option_type)
+    # and return: priceSol, S_grid, PDE_sol.
+    # -------------------------------------------------------------------------
     if numerical_method == "Forward Euler":
-    # 1) PDE solution for down-and-in
-        #priceDin, S_grid, PDE_din = forward_euler_down_in_call(S0, K, T, r, sigma, dS, dt, barrier)
-        priceSol, S_grid, PDE_sol = forward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type)
-        
-
-        st.write(f"**PDE price at S0** = {priceSol:.4f}")
-
-        # 2) Evaluate the closed-form formula over the same S_grid
-        #    for "down-and-in call"
-        analytic_vals = []
-        for s in S_grid:
-            val = barrier_option_price(s, K, T, r, q, sigma, barrier, option_type)
-            # Some formulas may return None if input is out of domain logic.
-            # We'll assume 0 if None is returned.
-            if val is None or val < 0:
-                val = 0.0
-            analytic_vals.append(val)
-            
-        new_pde = PDE_sol[1:]
-        # 3) Plot PDE vs Analytical
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=S_grid, 
-            #y=PDE_sol, 
-            y = new_pde,
-            mode="markers+lines", 
-            name="PDE Solution"
-        ))
-        fig.add_trace(go.Scatter(
-            x=S_grid,
-            y=analytic_vals,
-            mode="lines",
-            name="Analytical "+option_type
-        ))
-        fig.update_layout(
-            title= option_type+" vs Analytical",
-            xaxis_title="Stock Price (S)",
-            yaxis_title="Option Value"
-        )
-        st.plotly_chart(fig)
-        
+         priceSol, S_grid, PDE_sol = forward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type)
+         new_pde = PDE_sol[1:]
+         new_S_grid = S_grid[1:]
     elif numerical_method == "Backward Euler":
-    # 1) PDE solution for down-and-in
-        #priceDin, S_grid, PDE_din = forward_euler_down_in_call(S0, K, T, r, sigma, dS, dt, barrier)
-        priceSol, S_grid, PDE_sol = backward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type)
-        
-
-        st.write(f"**PDE price at S0** = {priceSol:.4f}")
-
-        # 2) Evaluate the closed-form formula over the same S_grid
-        #    for "down-and-in call"
-        analytic_vals = []
-        for s in S_grid:
-            val = barrier_option_price(s, K, T, r, q, sigma, barrier, option_type)
-            # Some formulas may return None if input is out of domain logic.
-            # We'll assume 0 if None is returned.
-            if val is None or val < 0:
-                val = 0.0
-            analytic_vals.append(val)
-            
-        new_pde = PDE_sol[2:]
-        # 3) Plot PDE vs Analytical
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=S_grid, 
-            #y=PDE_sol, 
-            y = new_pde,
-            mode="markers+lines", 
-            name="PDE Solution"
-        ))
-        fig.add_trace(go.Scatter(
-            x=S_grid,
-            y=analytic_vals,
-            mode="lines",
-            name="Analytical "+option_type
-        ))
-        fig.update_layout(
-            title= option_type+" vs Analytical",
-            xaxis_title="Stock Price (S)",
-            yaxis_title="Option Value"
-        )
-        st.plotly_chart(fig)
-        
+         priceSol, S_grid, PDE_sol = backward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type)
+         new_pde = PDE_sol[2:]
+         new_S_grid = S_grid[2:]
     elif numerical_method == "Crank-Nicolson":
-    # 1) PDE solution for down-and-in
-        #priceDin, S_grid, PDE_din = forward_euler_down_in_call(S0, K, T, r, sigma, dS, dt, barrier)
-        priceSol, S_grid, PDE_sol = crank_nicolson(S0, K, T, r, sigma, dS, dt, barrier, option_type)
-        
-
-        st.write(f"**PDE price at S0** = {priceSol:.4f}")
-        
-
-        # 2) Evaluate the closed-form formula over the same S_grid
-        #    for "down-and-in call"
-        analytic_vals = []
-        for s in S_grid:
-            val = barrier_option_price(s, K, T, r, q, sigma, barrier, option_type)
-            # Some formulas may return None if input is out of domain logic.
-            # We'll assume 0 if None is returned.
-            if val is None or val < 0:
-                val = 0.0
-            analytic_vals.append(val)
-            
-        new_pde = PDE_sol[1:]
-        # 3) Plot PDE vs Analytical
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=S_grid, 
-            #y=PDE_sol, 
-            y = new_pde,
-            mode="markers+lines", 
-            name="PDE Solution"
-        ))
-        fig.add_trace(go.Scatter(
-            x=S_grid,
-            y=analytic_vals,
-            mode="lines",
-            name="Analytical "+option_type
-        ))
-        fig.update_layout(
-            title= option_type+" vs Analytical",
-            xaxis_title="Stock Price (S)",
-            yaxis_title="Option Value"
+         priceSol, S_grid, PDE_sol = crank_nicolson(S0, K, T, r, sigma, dS, dt, barrier, option_type)
+         new_pde = PDE_sol[1:]
+         new_S_grid = S_grid[1:]
+    
+    # -------------------------------------------------------------------------
+    # Compute the analytical (closed-form) barrier option values over S_grid.
+    # The function barrier_option_price(s, K, T, r, q, sigma, barrier, option_type)
+    # is assumed to be defined elsewhere.
+    # -------------------------------------------------------------------------
+    analytic_vals = []
+    for s in S_grid:
+         val = barrier_option_price(s, K, T, r, q, sigma, barrier, option_type)
+         if val is None or val < 0:
+             val = 0.0
+         analytic_vals.append(val)
+    
+    # Compute the analytical price at S0.
+    analytic_price_S0 = barrier_option_price(S0, K, T, r, q, sigma, barrier, option_type)
+    if analytic_price_S0 is None or analytic_price_S0 < 0:
+         analytic_price_S0 = 0.0
+    # Compute the absolute error at S0.
+    error_S0 = abs(priceSol - analytic_price_S0)
+    
+    # -------------------------------------------------------------------------
+    # Display metric boxes (side by side) at the top.
+    # -------------------------------------------------------------------------
+    st.markdown('<div class="metric-container">', unsafe_allow_html=True)
+    colA, colB, colC = st.columns(3)
+    with colA:
+        st.markdown(
+            f"""
+            <div class="metric-card">
+            <div class="metric-title">{numerical_method} PDE Price</div>
+            <div class="metric-value">${priceSol:.4f}</div>
+            </div>
+            """,
+            unsafe_allow_html=True
         )
-        st.plotly_chart(fig)
-        
+    with colB:
+        st.markdown(
+            f"""
+            <div class="metric-card">
+            <div class="metric-title">Analytical Price</div>
+            <div class="metric-value">${analytic_price_S0:.4f}</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    with colC:
+        st.markdown(
+            f"""
+            <div class="metric-card">
+            <div class="metric-title">Absolute Error</div>
+            <div class="metric-value">${error_S0:.4f}</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    
+    # -------------------------------------------------------------------------
+    # Prepare data for the first plot: PDE vs Analytical over stock price.
+    # We slice the computed arrays to drop the first index (or two for backward Euler)
+    # so that the domain matches the PDE solution.
+    # -------------------------------------------------------------------------
+    if numerical_method == "Backward Euler":
+         new_analytic_vals = analytic_vals[2:]
+    else:
+         new_analytic_vals = analytic_vals[1:]
+    
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+         x=new_S_grid,
+         y=new_pde,
+         mode="markers+lines",
+         name="PDE Solution"
+    ))
+    fig.add_trace(go.Scatter(
+         x=new_S_grid,
+         y=new_analytic_vals,
+         mode="lines",
+         name="Analytical " + option_type
+    ))
+    fig.update_layout(
+         title= option_type + " vs Analytical",
+         xaxis_title="Stock Price (S)",
+         yaxis_title="Option Value"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    
+   
+
 if __name__ == "__main__":
     app()
+

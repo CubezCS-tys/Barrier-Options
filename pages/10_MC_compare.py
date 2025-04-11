@@ -815,7 +815,7 @@ import plotly.graph_objects as go
 st.set_page_config(page_title="Barrier Option Pricing: Enhanced UI", layout="wide")
 
 # Sidebar Inputs
-st.sidebar.header("📌 Input Parameters")
+st.sidebar.header("Input Parameters")
 option_type = st.sidebar.selectbox("Barrier Option Type", [
     "down-and-in call", "down-and-out call", "down-and-in put", "down-and-out put",
     "up-and-in call", "up-and-out call", "up-and-in put", "up-and-out put"
@@ -833,8 +833,8 @@ st.sidebar.subheader("Monte Carlo Grid")
 M_list = sorted([int(x.strip()) for x in st.sidebar.text_input("Comma-separated M values:", "50,100,200").split(",")])
 N_list = sorted([int(x.strip()) for x in st.sidebar.text_input("Comma-separated N values:", "100,1000,10000").split(",")])
 
-st.header("📊 Monte Carlo Method Comparison")
-if st.button("▶️ Run Monte Carlo Simulation"):
+st.header("Monte Carlo Method Comparison")
+if st.button("Run Monte Carlo Simulation"):
     analytical_price = barrier_option_price(S0, K, T, r, q, sigma, H, option_type)
     results = []
     for m in M_list:
@@ -861,13 +861,13 @@ if "df_results" in st.session_state:
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("### 📋 Full Error Table")
+        st.markdown("### Full Error Table")
         def highlight_min(row):
             errors = row[["Plain Error", "CV Error", "AV Error", "Combined Error"]]
             return ['background-color: #90ee90' if v == errors.min() else '' for v in errors]
         st.dataframe(df.style.format("{:.4f}").apply(highlight_min, axis=1, subset=["Plain Error", "CV Error", "AV Error", "Combined Error"]), use_container_width=True)
 
-        st.markdown("### 📊 Pivot Tables by Method")
+        st.markdown("### Pivot Tables by Method")
         st.write("#### Plain MC")
         df_plain = df.pivot(index="N", columns="M", values="Plain")
         st.dataframe(df_plain.style.format("{:.4f}"), use_container_width=True)
@@ -885,21 +885,21 @@ if "df_results" in st.session_state:
         st.dataframe(df_comb.style.format("{:.4f}"), use_container_width=True)
 
     with col2:
-        st.markdown("#### ✅ Summary Statistics")
+        st.markdown("#### Summary Statistics")
         best_row = df.loc[df['Combined Error'].idxmin()]
         st.metric(label="Min Combined Error", value=f"{best_row['Combined Error']:.4f}")
         st.markdown(f"**Best (M, N):** M = `{int(best_row['M'])}`, N = `{int(best_row['N'])}`")
         st.metric(label="Combined Estimate", value=f"${best_row['Combined']:.4f}")
         st.metric(label="Analytical Price", value=f"${analytical_price:.4f}")
 
-        st.markdown("### 📈 Option Value vs N (for selected M)")
+        st.markdown("### Option Value vs N (for selected M)")
         selected_M = st.selectbox("Select M value:", M_list)
         df_melt = df[df["M"] == selected_M].melt(id_vars=["N"], value_vars=["Plain", "CV", "AV", "Combined"], var_name="Method", value_name="Option Value")
         fig_line = px.line(df_melt, x="N", y="Option Value", color="Method", markers=True)
         fig_line.add_hline(y=analytical_price, line_dash="dash", line_color="red", annotation_text=f"Analytical: {analytical_price:.4f}")
         st.plotly_chart(fig_line, use_container_width=True)
 
-        st.markdown("### 🌍 3D Surface of Absolute Error")
+        st.markdown("### 3D Surface of Absolute Error")
         error_method = st.selectbox("Choose Error Metric:", ["Plain Error", "CV Error", "AV Error", "Combined Error"])
         df_surface = df.pivot(index="N", columns="M", values=error_method)
         fig_surface = go.Figure(data=[go.Surface(z=df_surface.values, x=df_surface.columns, y=df_surface.index)])
