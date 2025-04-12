@@ -2769,85 +2769,243 @@ def crank_nicolson(S0, K, T, r, sigma, dS, dt, barrier, option_type):
         
 # if __name__ == "__main__":
 #     app()
+####################################################
+#MAIN
+# import streamlit as st
+# import numpy as np
+# import pandas as pd
+# from scipy.stats import norm
+# import plotly.graph_objects as go
+# from scipy.interpolate import interp1d
 
-import streamlit as st
-import numpy as np
+# # -----------------------------------------------------------------------------
+# # Custom CSS to improve the UI (metric boxes and overall styling)
+# # -----------------------------------------------------------------------------
+# st.markdown(
+#     """
+#     <style>
+#     /* General background and font */
+#     body {
+#       background-color: #f8f9fa;
+#       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+#     }
+#     /* Main container styling */
+#     .reportview-container .main {
+#         background-color: #ffffff;
+#         padding: 1rem 2rem;
+#         border-radius: 10px;
+#     }
+#     /* Sidebar styling */
+#     .css-1d391kg {  
+#         background-color: #ffffff;
+#         padding: 20px;
+#         border-radius: 10px;
+#         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+#     }
+#     /* Input field styling */
+#     .stTextInput>div>div>input,
+#     .stNumberInput>div>div>input {
+#         border-radius: 5px;
+#         border: 1px solid #aaa;
+#     }
+#     /* Metric cards container */
+#     .metric-container {
+#         display: flex;
+#         flex-direction: row;
+#         justify-content: space-evenly;
+#         margin-bottom: 1rem;
+#     }
+#     /* Individual metric card style */
+#     .metric-card {
+#         background-color: #fafafa;
+#         border: 1px solid #ddd;
+#         border-radius: 8px;
+#         padding: 1rem;
+#         flex: 1;
+#         margin: 0 0.5rem;
+#         text-align: center;
+#         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+#     }
+#     .metric-title {
+#         font-size: 1rem;
+#         font-weight: 600;
+#         color: #555;
+#     }
+#     .metric-value {
+#         font-size: 1.4rem;
+#         font-weight: 700;
+#         margin-top: 0.2rem;
+#         color: #333;
+#     }
+#     </style>
+#     """,
+#     unsafe_allow_html=True
+# )
+
+# # -----------------------------------------------------------------------------
+# # Barrier option page (the app)
+# # -----------------------------------------------------------------------------
+# def app():
+#     st.title("Barrier Options: PDE vs Analytical Barrier Formula")
+    
+#     # Sidebar inputs (as before)
+#     S0 = st.sidebar.number_input("Spot Price (S0)", value=100.0, step=1.0)
+#     K  = st.sidebar.number_input("Strike Price (K)", value=100.0, step=1.0)
+#     T  = st.sidebar.number_input("Time to Maturity (T)", value=1.0, step=0.00001)
+#     r  = st.sidebar.number_input("Risk-Free Rate (r)", value=0.05, step=0.01)
+#     q  = st.sidebar.number_input("Dividend Yield (q)", value=0.00, step=0.01)
+#     sigma = st.sidebar.number_input("Volatility (sigma)", value=0.2, step=0.01)
+#     barrier = st.sidebar.number_input("Barrier", value=80.0, step=1.0)
+#     dS = st.sidebar.number_input("Space Step (dS)", value=1.0, step=0.000001)
+#     dt = st.sidebar.number_input("Time Step (dt)", value=0.0001, step=0.001)
+#     option_type = st.sidebar.selectbox(
+#         "Option Type",
+#         [
+#             "down-and-in call",
+#             "down-and-out call",
+#             "down-and-in put",
+#             "down-and-out put",
+#             "up-and-in call",
+#             "up-and-out call",
+#             "up-and-in put",
+#             "up-and-out put",
+#         ]
+#     )
+#     numerical_method = st.sidebar.selectbox("Numerical method", 
+#                                               ("Forward Euler", "Backward Euler", "Crank-Nicolson"))
+    
+#     # -------------------------------------------------------------------------
+#     # Compute the PDE solution using the selected numerical method.
+#     # We assume that the numerical functions accept arguments:
+#     # (S0, K, T, r, sigma, dS, dt, barrier, option_type)
+#     # and return: priceSol, S_grid, PDE_sol.
+#     # -------------------------------------------------------------------------
+#     if numerical_method == "Forward Euler":
+#          priceSol, S_grid, PDE_sol = forward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type)
+#          new_pde = PDE_sol[1:]
+#          new_S_grid = S_grid[1:]
+#     elif numerical_method == "Backward Euler":
+#          priceSol, S_grid, PDE_sol = backward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type)
+#          new_pde = PDE_sol[2:]
+#          new_S_grid = S_grid[2:]
+#     elif numerical_method == "Crank-Nicolson":
+#          priceSol, S_grid, PDE_sol = crank_nicolson(S0, K, T, r, sigma, dS, dt, barrier, option_type)
+#          new_pde = PDE_sol[1:]
+#          new_S_grid = S_grid[1:]
+    
+#     # -------------------------------------------------------------------------
+#     # Compute the analytical (closed-form) barrier option values over S_grid.
+#     # The function barrier_option_price(s, K, T, r, q, sigma, barrier, option_type)
+#     # is assumed to be defined elsewhere.
+#     # -------------------------------------------------------------------------
+#     analytic_vals = []
+#     for s in S_grid:
+#          val = barrier_option_price(s, K, T, r, q, sigma, barrier, option_type)
+#          if val is None or val < 0:
+#              val = 0.0
+#          analytic_vals.append(val)
+    
+#     # Compute the analytical price at S0.
+#     analytic_price_S0 = barrier_option_price(S0, K, T, r, q, sigma, barrier, option_type)
+#     if analytic_price_S0 is None or analytic_price_S0 < 0:
+#          analytic_price_S0 = 0.0
+#     # Compute the absolute error at S0.
+#     error_S0 = abs(priceSol - analytic_price_S0)
+    
+#     # -------------------------------------------------------------------------
+#     # Display metric boxes (side by side) at the top.
+#     # -------------------------------------------------------------------------
+#     st.markdown('<div class="metric-container">', unsafe_allow_html=True)
+#     colA, colB, colC = st.columns(3)
+#     with colA:
+#         st.markdown(
+#             f"""
+#             <div class="metric-card">
+#             <div class="metric-title">{numerical_method} PDE Price</div>
+#             <div class="metric-value">${priceSol:.4f}</div>
+#             </div>
+#             """,
+#             unsafe_allow_html=True
+#         )
+#     with colB:
+#         st.markdown(
+#             f"""
+#             <div class="metric-card">
+#             <div class="metric-title">Analytical Price</div>
+#             <div class="metric-value">${analytic_price_S0:.4f}</div>
+#             </div>
+#             """,
+#             unsafe_allow_html=True
+#         )
+#     with colC:
+#         st.markdown(
+#             f"""
+#             <div class="metric-card">
+#             <div class="metric-title">Absolute Error</div>
+#             <div class="metric-value">${error_S0:.4f}</div>
+#             </div>
+#             """,
+#             unsafe_allow_html=True
+#         )
+#     st.markdown('</div>', unsafe_allow_html=True)
+    
+    
+#     # -------------------------------------------------------------------------
+#     # Prepare data for the first plot: PDE vs Analytical over stock price.
+#     # We slice the computed arrays to drop the first index (or two for backward Euler)
+#     # so that the domain matches the PDE solution.
+#     # -------------------------------------------------------------------------
+#     if numerical_method == "Backward Euler":
+#          new_analytic_vals = analytic_vals[2:]
+#     else:
+#          new_analytic_vals = analytic_vals[1:]
+    
+#     fig = go.Figure()
+#     fig.add_trace(go.Scatter(
+#          x=new_S_grid,
+#          y=new_pde,
+#          mode="markers+lines",
+#          name="PDE Solution"
+#     ))
+#     fig.add_trace(go.Scatter(
+#          x=new_S_grid,
+#          y=new_analytic_vals,
+#          mode="lines",
+#          name="Analytical " + option_type
+#     ))
+#     fig.update_layout(
+#          title= option_type + " vs Analytical",
+#          xaxis_title="Stock Price (S)",
+#          yaxis_title="Option Value"
+#     )
+#     st.plotly_chart(fig, use_container_width=True)
+    
+   
+
+# if __name__ == "__main__":
+#     app()
 import pandas as pd
-from scipy.stats import norm
-import plotly.graph_objects as go
-from scipy.interpolate import interp1d
-
-# -----------------------------------------------------------------------------
-# Custom CSS to improve the UI (metric boxes and overall styling)
-# -----------------------------------------------------------------------------
-st.markdown(
+def get_pde_price(method_name, S0, K, T, r, sigma, dS, dt, barrier, option_type):
     """
-    <style>
-    /* General background and font */
-    body {
-      background-color: #f8f9fa;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    /* Main container styling */
-    .reportview-container .main {
-        background-color: #ffffff;
-        padding: 1rem 2rem;
-        border-radius: 10px;
-    }
-    /* Sidebar styling */
-    .css-1d391kg {  
-        background-color: #ffffff;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    /* Input field styling */
-    .stTextInput>div>div>input,
-    .stNumberInput>div>div>input {
-        border-radius: 5px;
-        border: 1px solid #aaa;
-    }
-    /* Metric cards container */
-    .metric-container {
-        display: flex;
-        flex-direction: row;
-        justify-content: space-evenly;
-        margin-bottom: 1rem;
-    }
-    /* Individual metric card style */
-    .metric-card {
-        background-color: #fafafa;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 1rem;
-        flex: 1;
-        margin: 0 0.5rem;
-        text-align: center;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    .metric-title {
-        font-size: 1rem;
-        font-weight: 600;
-        color: #555;
-    }
-    .metric-value {
-        font-size: 1.4rem;
-        font-weight: 700;
-        margin-top: 0.2rem;
-        color: #333;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+    Returns the PDE price at spot S0 for the given method_name.
+    method_name must be one of: 'FE', 'BE', 'CN'.
+    """
+    if method_name == 'FE':
+        price, _, _ = forward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type)
+    elif method_name == 'BE':
+        price, _, _ = backward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type)
+    elif method_name == 'CN':
+        price, _, _ = crank_nicolson(S0, K, T, r, sigma, dS, dt, barrier, option_type)
+    else:
+        price = None
+    return 0.0 if (price is None or price < 0) else price
 
-# -----------------------------------------------------------------------------
-# Barrier option page (the app)
-# -----------------------------------------------------------------------------
 def app():
     st.title("Barrier Options: PDE vs Analytical Barrier Formula")
     
-    # Sidebar inputs (as before)
+    # -----------------------------
+    # 1. Sidebar inputs
+    # -----------------------------
     S0 = st.sidebar.number_input("Spot Price (S0)", value=100.0, step=1.0)
     K  = st.sidebar.number_input("Strike Price (K)", value=100.0, step=1.0)
     T  = st.sidebar.number_input("Time to Maturity (T)", value=1.0, step=0.00001)
@@ -2870,117 +3028,133 @@ def app():
             "up-and-out put",
         ]
     )
-    numerical_method = st.sidebar.selectbox("Numerical method", 
-                                              ("Forward Euler", "Backward Euler", "Crank-Nicolson"))
+    numerical_method = st.sidebar.selectbox(
+        "Numerical method", 
+        ("Forward Euler", "Backward Euler", "Crank-Nicolson")
+    )
     
-    # -------------------------------------------------------------------------
-    # Compute the PDE solution using the selected numerical method.
-    # We assume that the numerical functions accept arguments:
-    # (S0, K, T, r, sigma, dS, dt, barrier, option_type)
-    # and return: priceSol, S_grid, PDE_sol.
-    # -------------------------------------------------------------------------
+    # -----------------------------
+    # 2. PDE price at the current S0
+    # -----------------------------
     if numerical_method == "Forward Euler":
-         priceSol, S_grid, PDE_sol = forward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type)
-         new_pde = PDE_sol[1:]
-         new_S_grid = S_grid[1:]
+        priceSol, S_grid, PDE_sol = forward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type)
+        # For plotting, remove the first index only:
+        new_pde = PDE_sol[1:]
+        new_S_grid = S_grid[1:]
     elif numerical_method == "Backward Euler":
-         priceSol, S_grid, PDE_sol = backward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type)
-         new_pde = PDE_sol[2:]
-         new_S_grid = S_grid[2:]
-    elif numerical_method == "Crank-Nicolson":
-         priceSol, S_grid, PDE_sol = crank_nicolson(S0, K, T, r, sigma, dS, dt, barrier, option_type)
-         new_pde = PDE_sol[1:]
-         new_S_grid = S_grid[1:]
+        priceSol, S_grid, PDE_sol = backward_euler(S0, K, T, r, sigma, dS, dt, barrier, option_type)
+        # For plotting, remove the first two indices:
+        new_pde = PDE_sol[2:]
+        new_S_grid = S_grid[2:]
+    else:  # Crank-Nicolson
+        priceSol, S_grid, PDE_sol = crank_nicolson(S0, K, T, r, sigma, dS, dt, barrier, option_type)
+        # For plotting, remove the first index:
+        new_pde = PDE_sol[1:]
+        new_S_grid = S_grid[1:]
     
-    # -------------------------------------------------------------------------
-    # Compute the analytical (closed-form) barrier option values over S_grid.
-    # The function barrier_option_price(s, K, T, r, q, sigma, barrier, option_type)
-    # is assumed to be defined elsewhere.
-    # -------------------------------------------------------------------------
-    analytic_vals = []
-    for s in S_grid:
-         val = barrier_option_price(s, K, T, r, q, sigma, barrier, option_type)
-         if val is None or val < 0:
-             val = 0.0
-         analytic_vals.append(val)
-    
-    # Compute the analytical price at S0.
+    # -----------------------------
+    # 3. Analytical at S0
+    # -----------------------------
     analytic_price_S0 = barrier_option_price(S0, K, T, r, q, sigma, barrier, option_type)
     if analytic_price_S0 is None or analytic_price_S0 < 0:
-         analytic_price_S0 = 0.0
-    # Compute the absolute error at S0.
+        analytic_price_S0 = 0.0
+    
+    # Absolute error at S0:
     error_S0 = abs(priceSol - analytic_price_S0)
     
-    # -------------------------------------------------------------------------
-    # Display metric boxes (side by side) at the top.
-    # -------------------------------------------------------------------------
-    st.markdown('<div class="metric-container">', unsafe_allow_html=True)
+    # -----------------------------
+    # 4. Display metrics
+    # -----------------------------
+    st.subheader("Single-Spot Results (S0)")
+
     colA, colB, colC = st.columns(3)
     with colA:
-        st.markdown(
-            f"""
-            <div class="metric-card">
-            <div class="metric-title">{numerical_method} PDE Price</div>
-            <div class="metric-value">${priceSol:.4f}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        st.metric(label=f"{numerical_method} PDE Price", value=f"{priceSol:.4f}")
     with colB:
-        st.markdown(
-            f"""
-            <div class="metric-card">
-            <div class="metric-title">Analytical Price</div>
-            <div class="metric-value">${analytic_price_S0:.4f}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        st.metric(label="Analytical Price", value=f"{analytic_price_S0:.4f}")
     with colC:
-        st.markdown(
-            f"""
-            <div class="metric-card">
-            <div class="metric-title">Absolute Error</div>
-            <div class="metric-value">${error_S0:.4f}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-    st.markdown('</div>', unsafe_allow_html=True)
+        st.metric(label="Absolute Error", value=f"{error_S0:.4f}")
     
+    # -----------------------------
+    # 5. Plot PDE vs Analytical curve
+    # -----------------------------
+    # Evaluate the analytical across the PDE's S_grid
+    analytic_vals = []
+    for s in S_grid:
+        val = barrier_option_price(s, K, T, r, q, sigma, barrier, option_type)
+        if val is None or val < 0:
+            val = 0.0
+        analytic_vals.append(val)
     
-    # -------------------------------------------------------------------------
-    # Prepare data for the first plot: PDE vs Analytical over stock price.
-    # We slice the computed arrays to drop the first index (or two for backward Euler)
-    # so that the domain matches the PDE solution.
-    # -------------------------------------------------------------------------
     if numerical_method == "Backward Euler":
-         new_analytic_vals = analytic_vals[2:]
+        new_analytic_vals = analytic_vals[2:]
     else:
-         new_analytic_vals = analytic_vals[1:]
+        new_analytic_vals = analytic_vals[1:]
     
     fig = go.Figure()
     fig.add_trace(go.Scatter(
          x=new_S_grid,
          y=new_pde,
          mode="markers+lines",
-         name="PDE Solution"
+         name=f"{numerical_method} PDE"
     ))
     fig.add_trace(go.Scatter(
          x=new_S_grid,
          y=new_analytic_vals,
          mode="lines",
-         name="Analytical " + option_type
+         name="Analytical"
     ))
     fig.update_layout(
-         title= option_type + " vs Analytical",
+         title= option_type + f" ({numerical_method} PDE) vs Analytical",
          xaxis_title="Stock Price (S)",
          yaxis_title="Option Value"
     )
     st.plotly_chart(fig, use_container_width=True)
     
-   
+    # -----------------------------
+    # 6. Accuracy Table (all PDE methods) across multiple spots
+    # -----------------------------
+    st.subheader("Accuracy Table vs Analytical Value")
 
+    # For demonstration, let's test these spot values:
+    test_spots = [80.0, 90.0, 100.0, 110.0, 120.0]
+    
+    rows = []
+    for spot in test_spots:
+        # 1) Analytical:
+        an = barrier_option_price(spot, K, T, r, q, sigma, barrier, option_type)
+        if an is None or an < 0:
+            an = 0.0
+        
+        # 2) PDE prices from each method:
+        fe_price = get_pde_price('FE', spot, K, T, r, sigma, dS, dt, barrier, option_type)
+        be_price = get_pde_price('BE', spot, K, T, r, sigma, dS, dt, barrier, option_type)
+        cn_price = get_pde_price('CN', spot, K, T, r, sigma, dS, dt, barrier, option_type)
+        
+        # 3) Accuracy as PDE / Analytical * 100 (if an != 0)
+        fe_acc = (fe_price / an * 100.0) if an != 0 else None
+        be_acc = (be_price / an * 100.0) if an != 0 else None
+        cn_acc = (cn_price / an * 100.0) if an != 0 else None
+        
+        rows.append({
+            "Spot": spot,
+            "Analytical": an,
+            "FE": fe_price,
+            "FE Accuracy": f"{fe_acc:.2f}%" if fe_acc else "N/A",
+            "BE": be_price,
+            "BE Accuracy": f"{be_acc:.2f}%" if be_acc else "N/A",
+            "CN": cn_price,
+            "CN Accuracy": f"{cn_acc:.2f}%" if cn_acc else "N/A"
+        })
+    
+    df = pd.DataFrame(
+        rows, 
+        columns=["Spot", "Analytical", "FE", "FE Accuracy", "BE", "BE Accuracy", "CN", "CN Accuracy"]
+    )
+    
+    st.table(df)
+
+
+# Run the Streamlit app
 if __name__ == "__main__":
     app()
-
