@@ -1203,6 +1203,27 @@ def crank_nicolson(S0, K, T, r, sigma, dS, dt, barrier, option_type):
 
 import pandas as pd
 import time
+
+
+
+import streamlit as st
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+import time  # for timing in convergence tests
+from scipy.interpolate import interp1d
+from scipy.stats import norm
+
+# -----------------------------------------------------------
+# 1) PDE Solvers + Analytical barrier function go here
+#    (Make sure these are defined, as usual.)
+#    e.g.:
+#      - def barrier_option_price(...)
+#      - def forward_euler(...)
+#      - def backward_euler(...)
+#      - def crank_nicolson(...)
+# -----------------------------------------------------------
+
 def get_pde_price(method_name, S0, K, T, r, sigma, dS, dt, barrier, option_type):
     """
     Returns the PDE price at spot S0 for the given method_name.
@@ -1226,14 +1247,16 @@ def app():
     st.set_page_config(page_title="Numerical Scheme Comparisons", layout="wide")
     st.title("Comparison of Forward/Backward/Crank–Nicolson Methods")
 
+    # -------------------------------
     # Sidebar Inputs
+    # -------------------------------
     st.sidebar.header("Option & FD Parameters")
     option_type = st.sidebar.selectbox(
         "Option Type", [
             "down-and-in call", "down-and-out call",
-            "down-and-in put", "down-and-out put",
-            "up-and-in call", "up-and-out call",
-            "up-and-in put", "up-and-out put"
+            "down-and-in put",  "down-and-out put",
+            "up-and-in call",   "up-and-out call",
+            "up-and-in put",    "up-and-out put"
         ]
     )
     K = st.sidebar.number_input("Strike (K)", value=100.0)
@@ -1256,28 +1279,17 @@ def app():
     dt_CN = st.sidebar.number_input("dt (Crank–Nicolson)", value=0.01, format="%.3f")
     dS_CN = st.sidebar.number_input("dS (Crank–Nicolson)", value=0.5)
 
-    # Accuracy Table vs Analytical Value
+    # -------------------------------
+    # 1) Accuracy Table vs Analytical Value
+    # -------------------------------
     st.subheader("1. Accuracy Table vs Analytical Value")
+
     rows = []
     spots = np.arange(S_min_input, S_max_input + 0.01, S_step)
-    for S0 in spots:
-        true_val = barrier_option_price(S0, K, T, r, q, sigma, barrier, option_type)
-        FE, _, _ = forward_euler(S0, K, T, r, sigma, dS_explicit, dt_explicit, barrier, option_type)
-        BE, _, _ = backward_euler(S0, K, T, r, sigma, dS_implicit, dt_implicit, barrier, option_type)
-        CN, _, _ = crank_nicolson(S0, K, T, r, sigma, dS_CN, dt_CN, barrier, option_type)
-        rows.append({
-            "Spot": f"{S0:.2f}",
-            "Analytical": f"{true_val:.4f}",
-            "FE": f"{FE:.4f}",
-            "FE Accuracy": f"{100*(1-abs(FE-true_val)/true_val):.2f}%" if true_val != 0 else "N/A",
-            "BE": f"{BE:.4f}",
-            "BE Accuracy": f"{100*(1-abs(BE-true_val)/true_val):.2f}%" if true_val != 0 else "N/A",
-            "CN": f"{CN:.4f}",
-            "CN Accuracy": f"{100*(1-abs(CN-true_val)/true_val):.2f}%" if true_val != 0 else "N/A",
-        })
-    st.table(pd.DataFrame(rows))
 
-    # Convergence & Runtime Analysis
+    # -------------------------------
+    # 2) Convergence & Runtime Analysis
+    # -------------------------------
     with st.expander("2. Convergence & Runtime Analysis"):
         st.markdown("Run convergence tests for a fixed spot (S₀).")
         S0_test = st.number_input("Test Spot (S₀)", value=100.0)
@@ -1289,62 +1301,62 @@ def app():
             dt_vals = np.logspace(np.log10(dt_min), np.log10(dt_max), n_steps)
             errors_FE, errors_BE, errors_CN = [], [], []
             times_FE, times_BE, times_CN = [], [], []
-            true_val = barrier_option_price(S0_test, K, T, r, sigma, barrier, option_type)
+            
+            true_val = barrier_option_price(S0_test, K, T, r, q, sigma, barrier, option_type)
+            if true_val is None or true_val < 0:
+                true_val = 0.0
+
             for dt in dt_vals:
+                # Forward Euler
                 t0 = time.perf_counter()
                 fe, _, _ = forward_euler(S0_test, K, T, r, sigma, dS_explicit, dt, barrier, option_type)
-                times_FE.append(time.perf_counter()-t0)
-                errors_FE.append(abs(fe-true_val))
-                
+                times_FE.append(time.perf_counter() - t0)
+                errors_FE.append(abs(fe - true_val))
+
+                # Backward Euler
                 t0 = time.perf_counter()
                 be, _, _ = backward_euler(S0_test, K, T, r, sigma, dS_implicit, dt, barrier, option_type)
-                times_BE.append(time.perf_counter()-t0)
-                errors_BE.append(abs(be-true_val))
-                
+                times_BE.append(time.perf_counter() - t0)
+                errors_BE.append(abs(be - true_val))
+
+                # Crank–Nicolson
                 t0 = time.perf_counter()
                 cn, _, _ = crank_nicolson(S0_test, K, T, r, sigma, dS_CN, dt, barrier, option_type)
-                times_CN.append(time.perf_counter()-t0)
-                errors_CN.append(abs(cn-true_val))
+                times_CN.append(time.perf_counter() - t0)
+                errors_CN.append(abs(cn - true_val))
             
             # Plot Error vs dt (log-log)
             fig_err = go.Figure()
-            fig_err.add_trace(go.Scatter(x=dt_vals, y=errors_FE, mode='lines+markers', name="Forward Euler"))
-            fig_err.add_trace(go.Scatter(x=dt_vals, y=errors_BE, mode='lines+markers', name="Backward Euler"))
-            fig_err.add_trace(go.Scatter(x=dt_vals, y=errors_CN, mode='lines+markers', name="Crank–Nicolson"))
+            fig_err.add_trace(go.Scatter(x=dt_vals, y=errors_FE,
+                                         mode='lines+markers', name="Forward Euler"))
+            fig_err.add_trace(go.Scatter(x=dt_vals, y=errors_BE,
+                                         mode='lines+markers', name="Backward Euler"))
+            fig_err.add_trace(go.Scatter(x=dt_vals, y=errors_CN,
+                                         mode='lines+markers', name="Crank–Nicolson"))
             fig_err.update_layout(title=f"Error vs dt (S₀ = {S0_test})",
-                                  xaxis_title="dt", yaxis_title="Absolute Error",
-                                  xaxis_type="log", yaxis_type="log", height=500)
+                                  xaxis_title="dt",
+                                  yaxis_title="Absolute Error",
+                                  xaxis_type="log",
+                                  yaxis_type="log",
+                                  height=500)
             st.plotly_chart(fig_err, use_container_width=True)
             
             # Plot Runtime vs dt
             fig_time = go.Figure()
-            fig_time.add_trace(go.Scatter(x=dt_vals, y=times_FE, mode='lines+markers', name="Forward Euler"))
-            fig_time.add_trace(go.Scatter(x=dt_vals, y=times_BE, mode='lines+markers', name="Backward Euler"))
-            fig_time.add_trace(go.Scatter(x=dt_vals, y=times_CN, mode='lines+markers', name="Crank–Nicolson"))
+            fig_time.add_trace(go.Scatter(x=dt_vals, y=times_FE,
+                                          mode='lines+markers', name="Forward Euler"))
+            fig_time.add_trace(go.Scatter(x=dt_vals, y=times_BE,
+                                          mode='lines+markers', name="Backward Euler"))
+            fig_time.add_trace(go.Scatter(x=dt_vals, y=times_CN,
+                                          mode='lines+markers', name="Crank–Nicolson"))
             fig_time.update_layout(title=f"Runtime vs dt (S₀ = {S0_test})",
-                                   xaxis_title="dt", yaxis_title="CPU Time (s)",
-                                   xaxis_type="log", height=500)
+                                   xaxis_title="dt",
+                                   yaxis_title="CPU Time (s)",
+                                   xaxis_type="log",
+                                   height=500)
             st.plotly_chart(fig_time, use_container_width=True)
     
-    # Plot Error vs Spot Price
-    st.subheader("3. Absolute Error vs Spot Price")
-    error_FE_spot, error_BE_spot, error_CN_spot = [], [], []
-    true_vals = []
-    for S0 in spots:
-        true_val = barrier_option_price(S0, K, T, r, q, sigma, barrier, option_type)
-        true_vals.append(true_val)
-        fe, _, _ = forward_euler(S0, K, T, r, sigma, dS_explicit, dt_explicit, barrier, option_type)
-        be, _, _ = backward_euler(S0, K, T, r, sigma, dS_implicit, dt_implicit, barrier, option_type)
-        cn, _, _ = crank_nicolson(S0, K, T, r, sigma, dS_CN, dt_CN, barrier, option_type)
-        error_FE_spot.append(abs(fe-true_val))
-        error_BE_spot.append(abs(be-true_val))
-        error_CN_spot.append(abs(cn-true_val))
-    fig_spot = go.Figure()
-    fig_spot.add_trace(go.Scatter(x=spots, y=error_FE_spot, mode='lines+markers', name="Forward Euler"))
-    fig_spot.add_trace(go.Scatter(x=spots, y=error_BE_spot, mode='lines+markers', name="Backward Euler"))
-    fig_spot.add_trace(go.Scatter(x=spots, y=error_CN_spot, mode='lines+markers', name="Crank–Nicolson"))
-    fig_spot.update_layout(title="Absolute Error vs Spot Price", xaxis_title="Spot Price", yaxis_title="Absolute Error", height=500)
-    st.plotly_chart(fig_spot, use_container_width=True)
     
+
 if __name__ == "__main__":
     app()
